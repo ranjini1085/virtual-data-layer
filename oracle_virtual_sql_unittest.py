@@ -7,7 +7,7 @@ import oracle_virtual_sql
 #unit test - convert Oracle sysdate to postgres [db_sysdate]
 
 sql_input = 'select sysdate from dual;'
-expected_sql_output = 'select [db_sysdate] from dual;'
+expected_sql_output = "select 'now'::timestamp from dual;"
 try:
     assert(oracle_virtual_sql.convert(sql_input,'postgres') == expected_sql_output)
     print('sysdate unit test passed')
@@ -30,6 +30,15 @@ except:
     print(' actual_output: '+ oracle_virtual_sql.convert(sql_input,'postgres'))
 
 #unit test - sequences
+sql_input = 'select sequencename.nextval from dual;'
+expected_sql_output = "select nextval('sequencename') from dual;"
+try:
+    assert(oracle_virtual_sql.convert(sql_input,'postgres') == expected_sql_output)
+    print('rowid unit test passed')
+except:
+    print('sequence unit test failed')
+    print(' expected output: '+ expected_sql_output)
+    print(' actual_output: '+ oracle_virtual_sql.convert(sql_input,'postgres'))
 
 #unit test - decode
 

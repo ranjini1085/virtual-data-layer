@@ -30,9 +30,10 @@ def oracle_to_postgres(input_sql):
             for x in stmt.tokens:
 #                print(x.value)
                 postgres_token = x.value
-                postgres_token = postgres_token.replace('sysdate','[db_sysdate]')
+                postgres_token = postgres_token.replace('sysdate',"'now'::timestamp")
                 postgres_token = postgres_token.replace('nvl(','coalesce(')
                 postgres_token = postgres_token.replace('rowid','ctid')
+                postgres_token = re.sub(r'(\w+)\.nextval',"nextval('\g<1>')",postgres_token)
                 
                 postgres_stmt += (postgres_token)
             
