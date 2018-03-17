@@ -26,7 +26,7 @@ def oracle_to_postgres(input_sql):
         for j in parsed_sql:
             stmt = j
 
-            #first, do the simple token replacements using regex replacements
+            #first, do the simple token replacements using replacements and regexes
             for x in stmt.tokens:
 #                print(x.value)
                 postgres_token = x.value
