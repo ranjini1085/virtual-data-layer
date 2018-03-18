@@ -7,3 +7,6 @@ translate_test.py
 sqlparse_function_test.py
 regex_test.py
 column_defs_lowlevel.py
+credentials_test.py
+oracle_connection.txt
+postgres_connection.txt
