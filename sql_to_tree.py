@@ -3,6 +3,8 @@
 #import sys
 import sqlparse
 import extract_table_names
+import extract_selected_columns
+import extract_where
 #import re
 
 def sql_to_tree(input_sql):
@@ -18,13 +20,21 @@ def sql_to_tree(input_sql):
     
     sql_tree = {}
     
+    sql_tree['select'] = extract_selected_columns.extract_select(input_sql)
     sql_tree['tables'] = extract_table_names.extract_tables(input_sql)
+    sql_tree['joins'] = extract_where.extract_joins(input_sql)
+    sql_tree['filters'] = extract_where.extract_filters(input_sql)
+    sql_tree['where_subqueries'] = extract_where.extract_where_subqueries(input_sql)
+#    sql_tree['aggregates'] =
+#    sql_tree['ordering'] = 
     
     return sql_tree
 
-input_sql = """
-    select K.a,K.b from (select H.b from (select G.c from (select F.d from
-    (select E.e from A, B, C, D, E), F), G), H), I, J, K order by 1,2;
-    """
 
-print(sql_to_tree(input_sql))
+if __name__ == '__main__':
+    input_sql = """select c.customer_name, o.order_date
+                from tcph.customer c, tcph.order o
+                where c.customer_id = o.customer_id
+                and c.customer_id = 1;"""
+
+    print(sql_to_tree(input_sql))
