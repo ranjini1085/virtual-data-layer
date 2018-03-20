@@ -5,6 +5,7 @@ import sqlparse
 import extract_table_names
 import extract_selected_columns
 import extract_where
+import extract_orderby
 #import re
 
 def sql_to_tree(input_sql):
@@ -26,7 +27,7 @@ def sql_to_tree(input_sql):
     sql_tree['filters'] = extract_where.extract_filters(input_sql)
     sql_tree['where_subqueries'] = extract_where.extract_where_subqueries(input_sql)
 #    sql_tree['aggregates'] =
-#    sql_tree['ordering'] = 
+    sql_tree['ordering'] = extract_orderby.extract_orderby(input_sql)
     
     return sql_tree
 
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     input_sql = """select c.customer_name, o.order_date
                 from tcph.customer c, tcph.order o
                 where c.customer_id = o.customer_id
-                and c.customer_id = 1;"""
+                and c.customer_id = 1
+                order by c.customer_name;"""
 
     print(sql_to_tree(input_sql))
