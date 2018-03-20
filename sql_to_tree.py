@@ -24,6 +24,7 @@ def sql_to_tree(input_sql):
     sql_tree['tables'] = extract_table_names.extract_tables(input_sql)
     sql_tree['joins'] = extract_where.extract_joins(input_sql)
     sql_tree['filters'] = extract_where.extract_filters(input_sql)
+    sql_tree['where_subqueries'] = extract_where.extract_where_subqueries(input_sql)
 #    sql_tree['aggregates'] =
 #    sql_tree['ordering'] = 
     
