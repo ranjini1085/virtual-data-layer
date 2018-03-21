@@ -8,30 +8,30 @@ import parse_utilities
 from parse_utilities import is_subselect
 
 
-def extract_orderby_part(parsed):
-    '''generator function that extracts "order by" part of a query, including any nested subqueries
+def extract_groupby_part(parsed):
+    '''generator function that extracts "group by" part of a query, including any nested subqueries
 
         keyword-args:
             parsed - list of output from sqlparse.parse() command
             
         returns:
-            each "order by" portion of the query until no more remain
+            each "group by" portion of the query until no more remain
     '''
     where_seen = False
-    order_by_seen = False
+    group_by_seen = False
     
     for item in parsed.tokens:
-        if item.value.upper() == 'HAVING':
+        if item.value.upper() == 'ORDER' or item.value.upper() == 'HAVING':
             raise StopIteration
-        if order_by_seen == True and item.value.upper() != 'BY':
+        if group_by_seen == True and item.value.upper() != 'BY':
             yield item
-        if where_seen == True and item.value.upper() == 'ORDER':
-            order_by_seen = True
+        if where_seen == True and item.value.upper() == 'GROUP':
+            group_by_seen = True
         if isinstance(item,sqlparse.sql.Where):
             where_seen = True
 
-def extract_orderby_identifiers(token_stream):
-    '''extracts column identifiers from a "order by" portion of a query
+def extract_groupby_identifiers(token_stream):
+    '''extracts column identifiers from a "group by" portion of a query
         does not currently support aliased tables - will return the alias instead of the table name
 
         keyword-args:
@@ -46,15 +46,15 @@ def extract_orderby_identifiers(token_stream):
             yield item.value
         
         
-def extract_orderby(sql):
-    '''extracts order by column identifiers from a SQL statement.  does not validate that the SQL is correct
+def extract_groupby(sql):
+    '''extracts group by column identifiers from a SQL statement.  does not validate that the SQL is correct
 
         keyword-args: a string containing a SQL statement
         
-        returns: a list of order by column identifiers
+        returns: a list of group by column identifiers
     '''
-    stream = extract_orderby_part(sqlparse.parse(sql)[0])
-    return list(extract_orderby_identifiers(stream))
+    stream = extract_groupby_part(sqlparse.parse(sql)[0])
+    return list(extract_groupby_identifiers(stream))
 
 
 
@@ -65,17 +65,18 @@ if __name__ == '__main__':
 #    (select E.e from A, B, C, D, E), F), G), H), I, J, K order by 1,2;
 #    """
 
-    sql = """select c.customer_name, o.order_date
+    sql = """select c.customer_name, o.order_date, sum(order_count)
             from tcph.customer c, tcph.order o
             where o.order_id = (select order_id from orders where order_id = 1)
-            order by c.customer_name desc, o.order_date asc"""
-#            (select customer_id from customer where customer_id = 1);"""
+            group by c.customer_name, o.order_date
+            order by c.customer_name desc, o.order_date asc
+            having sum(order_count) > 1"""
     
         
     
  #   sql = """select c.customer_name from customer c where customer_id = (select customer_id from orders where order_id = 123)"""
 
-    print(extract_orderby(sql))
+    print(extract_groupby(sql))
     
 #    print('joins: '+str(extract_joins(sql)))
 #    print('filters: '+str(extract_filters(sql)))
