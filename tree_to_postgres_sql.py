@@ -76,6 +76,7 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         
         for i, join in enumerate(where_block):
             
+            #replace non-standard SQL parts with Postgres SQL parts
             sql_command += syntax_replace_posgres(join, sql_type)
             
             if i < len(where_block) - 1:
@@ -89,6 +90,7 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         
         for i, grouping in enumerate(groupby_block):
             
+            #replace non-standard SQL parts with Postgres SQL parts
             sql_command += syntax_replace_posgres(grouping, sql_type)
             
             if i < len(groupby_block) - 1:
@@ -101,6 +103,7 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         orderby_block = sql_tree['ordering']
         
         for i, ordering in enumerate(orderby_block):
+            #replace non-standard SQL parts with Postgres SQL parts
             sql_command += syntax_replace_posgres(ordering, sql_type)
             
             if i < len(orderby_block) - 1:
@@ -113,6 +116,7 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         having_block = sql_tree['having']
         
         for i, having in enumerate(having_block):
+            #replace non-standard SQL parts with Postgres SQL parts
             sql_command += syntax_replace_posgres(having, sql_type)
             
             if i < len(having_block) - 1:

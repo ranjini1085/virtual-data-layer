@@ -1,12 +1,15 @@
 #!/usr/bin/python
-import oracle_to_postgres
+#import oracle_to_postgres
+import sql_to_tree
+import tree_to_postgres_sql
 import psycopg2
 import cx_Oracle
 
 def convert_oracle_to_postgres(input_sql,target_datastore_type):
     
-    if target_datastore_type == 'postgres':    
-        return oracle_to_postgres.oracle_to_postgres(input_sql)
+    if target_datastore_type == 'postgres':
+        sql_tree = sql_to_tree.sql_to_tree(input_sql)
+        return tree_to_postgres_sql.tree_to_postgres_sql(sql_tree)
     else:
         return 'Datastore not supported!'
     
