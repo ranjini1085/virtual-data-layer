@@ -9,7 +9,7 @@ def convert_oracle_to_postgres(input_sql,target_datastore_type):
     
     if target_datastore_type == 'postgres':
         sql_tree = sql_to_tree.sql_to_tree(input_sql)
-        return tree_to_postgres_sql.tree_to_postgres_sql(sql_tree)
+        return tree_to_postgres_sql.tree_to_postgres_sql(sql_tree,target_datastore_type)
     else:
         return 'Datastore not supported!'
     

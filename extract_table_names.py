@@ -66,7 +66,7 @@ def extract_table_alias_identifiers(token_stream):
             for identifier in item.get_identifiers():
                 yield [identifier.get_real_name(),identifier.get_alias()]
         elif isinstance(item, Identifier):
-            yield [identifier.get_real_name(),identifier.get_alias()]
+            yield [item.get_real_name(),item.get_alias()]
         # It's a bug to check for Keyword here, but in the example
         # above some tables names are identified as keywords...
         elif item.ttype is Keyword:
