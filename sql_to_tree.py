@@ -19,12 +19,14 @@ def sql_to_tree(input_sql):
     returns:
         list of sql tree components
     '''
+#   sql_stream = extract_select_part(sqlparse.parse(sql)[0])
     
     sql_tree = {}
     
-    sql_tree['select'] = extract_selected_columns.extract_select(input_sql) #remove aggregates
-#    sql_tree['select aggregate'] = need to add aggregates
-    sql_tree['tables'] = extract_table_names.extract_tables(input_sql) #needsto support aliases
+    #refactor all of these so that they take parsed SQL stream rather than raw SQL
+    sql_tree['select'] = extract_selected_columns.extract_select(input_sql)
+    sql_tree['select aggregate'] = extract_selected_columns.extract_select_aggregates(input_sql)
+    sql_tree['tables'] = extract_table_names.extract_tables(input_sql) #needs to support aliases
     sql_tree['joins'] = extract_where.extract_joins(input_sql)
     sql_tree['filters'] = extract_where.extract_filters(input_sql)
     sql_tree['where_subqueries'] = extract_where.extract_where_subqueries(input_sql) #need to split out join from subquery
@@ -36,7 +38,7 @@ def sql_to_tree(input_sql):
 
 if __name__ == '__main__':
     input_sql = """select c.customer_name, o.order_date, sum(o.orders)
-                from tcph.customer c, tcph.order o
+                from tcph.customer as c, tcph.order o
                 where c.customer_id = o.customer_id
                 and c.customer_id = 1
                 group by c.customer_name, o.order_date
