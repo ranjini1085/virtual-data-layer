@@ -57,11 +57,16 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         sql_command += ' from '
     
         from_block = sql_tree['table_aliases']
-        for i, table_alias_pair in enumerate(from_block):
-            sql_command += table_alias_pair[0]
-            if table_alias_pair[1] != None:
+        for i, table_definition in enumerate(from_block):
+            if table_definition['schema'] != None:
+                sql_command += table_definition['schema']
+                sql_command += '.'
+                
+            sql_command += table_definition['name']
+            
+            if table_definition['alias'] != None:
                 sql_command += ' as '
-                sql_command += table_alias_pair[1]
+                sql_command += table_definition['alias']
                 
             if i < len(from_block) - 1:
                 sql_command += ', '

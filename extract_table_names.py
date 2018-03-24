@@ -60,13 +60,23 @@ def extract_table_alias_identifiers(token_stream):
         returns:
             list of tables and their aliases
     '''
+
     
     for item in token_stream:
+        
         if isinstance(item, IdentifierList):
             for identifier in item.get_identifiers():
-                yield [identifier.get_real_name(),identifier.get_alias()]
+                table_definition = {}
+                table_definition['schema'] = identifier.get_parent_name()
+                table_definition['name'] = identifier.get_real_name()
+                table_definition['alias'] = identifier.get_alias()            
+                yield table_definition
         elif isinstance(item, Identifier):
-            yield [item.get_real_name(),item.get_alias()]
+            table_definition = {}
+            table_definition['schema'] = item.get_parent_name()
+            table_definition['name'] = item.get_real_name()
+            table_definition['alias'] = item.get_alias()     
+            yield table_definition
         # It's a bug to check for Keyword here, but in the example
         # above some tables names are identified as keywords...
         elif item.ttype is Keyword:
@@ -104,5 +114,5 @@ if __name__ == '__main__':
             and c.customer_id = o.customer_id
             and o.part_number = tcph.part.part_number;"""
 
-    print(extract_tables(sql))
+ #   print(extract_tables(sql))
     print(extract_table_aliases(sql))
