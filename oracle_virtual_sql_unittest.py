@@ -25,12 +25,12 @@ oracle_credentials = get_credentials.get_credentials('oracle_connection.txt')
 sql_input = 'select sysdate from dual;'
 expected_sql_output = "select 'now'::timestamp from dual;"
 try:
-    assert(oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres') == expected_sql_output)
+    assert(oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres') == expected_sql_output)
     print('sysdate unit test passed')
 except:
     print('sysdate unit test failed')
     print(' expected output: '+ expected_sql_output)
-    print(' actual_output: '+ oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres'))
+    print(' actual_output: '+ oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres'))
 
 #unit test - rownum
 
@@ -38,23 +38,23 @@ except:
 sql_input = 'select rowid from dual;'
 expected_sql_output = 'select ctid from dual;'
 try:
-    assert(oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres') == expected_sql_output)
+    assert(oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres') == expected_sql_output)
     print('rowid unit test passed')
 except:
     print('rowid unit test failed')
     print(' expected output: '+ expected_sql_output)
-    print(' actual_output: '+ oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres'))
+    print(' actual_output: '+ oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres'))
 
 #unit test - sequences
 sql_input = 'select sequencename.nextval from dual;'
 expected_sql_output = "select nextval('sequencename') from dual;"
 try:
-    assert(oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres') == expected_sql_output)
+    assert(oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres') == expected_sql_output)
     print('rowid unit test passed')
 except:
     print('sequence unit test failed')
     print(' expected output: '+ expected_sql_output)
-    print(' actual_output: '+ oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres'))
+    print(' actual_output: '+ oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres'))
 
 #unit test - decode
 
@@ -62,12 +62,12 @@ except:
 sql_input = 'select nvl(hire_date,fire_date) from dual;'
 expected_sql_output = 'select coalesce(hire_date,fire_date) from dual;'
 try:
-    assert(oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres') == expected_sql_output)
+    assert(oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres') == expected_sql_output)
     print('nvl unit test passed')
 except:
     print('nvl unit test failed')
     print(' expected output: '+ expected_sql_output)
-    print(' actual_output: '+ oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres'))
+    print(' actual_output: '+ oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres'))
 
 #unit test - subquery in from
 
@@ -101,7 +101,7 @@ sql_input = 'select c_name from querytest.customer where c_custkey = 1;'
 expected_sql_output = 'select c_name from querytest.customer where c_custkey = 1;'
 expected_db_output = 'Customer#000000001'
 
-postgres_sql = oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres')
+postgres_sql = oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres')
 try:
     assert(postgres_sql == expected_sql_output)
     assert(oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][0] == expected_db_output)
@@ -117,16 +117,17 @@ except:
 sql_input = 'select c_name, sysdate from querytest.customer where c_custkey = 1;'
 expected_sql_output = "select c_name, 'now'::timestamp from querytest.customer where c_custkey = 1;"
 expected_db_output = 'Customer#000000001'
-postgres_sql = oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'postgres')
+postgres_sql = oracle_virtual_sql.convert_oracle_to_postgres(sql_input,'oracle','postgres')
 try:
     assert(postgres_sql == expected_sql_output)
     assert(oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][0] == expected_db_output)
     assert(isinstance(oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][1],datetime.datetime))
-    print('simple postgres query unit test passed')
-except:
-    print('simple postgres query unit test failed')
+    print('sysdate unit test against postgres DB unit test passed')
+except Exception as e:
+    print(e)
+    print('sysdate unit test against postgres DB query unit test failed')
     print(' expected output: '+ expected_sql_output)
     print(' actual_output: '+ postgres_sql)
-    print(' actual db output: '+oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][0])
-    print(isinstance(oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][1],datetime.datetime))
-    print(' actual timestamp type: '+str(type(oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][1])))
+ #   print(' actual db output: '+oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][0])
+ #   print(isinstance(oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][1],datetime.datetime))
+ #   print(' actual timestamp type: '+str(type(oracle_virtual_sql.run_on_postgres(postgres_sql,postgres_cursor)[0][1])))
