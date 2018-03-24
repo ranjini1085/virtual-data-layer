@@ -10,3 +10,4 @@ column_defs_lowlevel.py
 credentials_test.py
 oracle_connection.txt
 postgres_connection.txt
+*.pyc
