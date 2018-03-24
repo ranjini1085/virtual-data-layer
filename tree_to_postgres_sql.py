@@ -53,10 +53,10 @@ def tree_to_postgres_sql(sql_tree, sql_type):
                 sql_command += ', '
     
     #construct from block
-    if len(sql_tree['table_aliases']) > 0:
+    if len(sql_tree['table_definitions']) > 0:
         sql_command += ' from '
     
-        from_block = sql_tree['table_aliases']
+        from_block = sql_tree['table_definitions']
         for i, table_definition in enumerate(from_block):
             if table_definition['schema'] != None:
                 sql_command += table_definition['schema']
@@ -126,14 +126,19 @@ def tree_to_postgres_sql(sql_tree, sql_type):
             
             if i < len(having_block) - 1:
                 sql_command += ', '
-    
+ 
+    #finish query
+    sql_command += ';'
+ 
     return sql_command
+
+
 
 if __name__ == '__main__':
     
     import sql_to_tree
     
-    input_sql = """select c.customer_name, o.order_date, sum(o.orders)
+    input_sql = """select c.customer_name, o.order_date, sum(o.orders), sysdate
                 from tcph.customer as c, tcph.order o, tcph.part
                 where c.customer_id = o.customer_id
                 and o.part_number = tcph.part.part_number

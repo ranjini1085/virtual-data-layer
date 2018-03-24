@@ -25,7 +25,7 @@ def sql_to_tree(input_sql):
     sql_tree['select'] = extract_selected_columns.extract_select(input_sql)
     sql_tree['select aggregate'] = extract_selected_columns.extract_select_aggregates(input_sql)
 #    sql_tree['tables'] = extract_table_names.extract_tables(input_sql) can remove this function
-    sql_tree['table_aliases'] = extract_table_names.extract_table_aliases(input_sql)
+    sql_tree['table_definitions'] = extract_table_names.extract_table_definitions(input_sql)
     sql_tree['joins'] = extract_where.extract_joins(input_sql) #needs support for outer joins
     sql_tree['filters'] = extract_where.extract_filters(input_sql)
     sql_tree['where_subqueries'] = extract_where.extract_where_subqueries(input_sql) #need to split out join from subquery
