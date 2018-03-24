@@ -6,6 +6,7 @@ import extract_selected_columns
 import extract_where
 import extract_orderby
 import extract_aggregates
+import extract_having
 
 def sql_to_tree(input_sql):
     '''Converts SQL to a SQL tree.  Does not validate that input SQL is correct.
@@ -24,14 +25,13 @@ def sql_to_tree(input_sql):
     #refactor all of these so that they take parsed SQL stream rather than raw SQL
     sql_tree['select'] = extract_selected_columns.extract_select(input_sql)
     sql_tree['select aggregate'] = extract_selected_columns.extract_select_aggregates(input_sql)
-#    sql_tree['tables'] = extract_table_names.extract_tables(input_sql) can remove this function
     sql_tree['table_definitions'] = extract_table_names.extract_table_definitions(input_sql)
     sql_tree['joins'] = extract_where.extract_joins(input_sql) #needs support for outer joins
     sql_tree['filters'] = extract_where.extract_filters(input_sql)
     sql_tree['where_subqueries'] = extract_where.extract_where_subqueries(input_sql) #need to split out join from subquery
     sql_tree['grouping'] = extract_aggregates.extract_groupby(input_sql)
     sql_tree['ordering'] = extract_orderby.extract_orderby(input_sql)
-    sql_tree['having'] = '' #needs to be implemented
+    sql_tree['having'] = extract_having.extract_having(input_sql)
     
     return sql_tree
 
@@ -43,6 +43,7 @@ if __name__ == '__main__':
                 and o.part_number = tcph.part.part_number
                 and c.customer_id = 1
                 group by c.customer_name, o.order_date
-                order by c.customer_name;"""
+                order by c.customer_name
+                having sum(o.orders) > 1;"""
 
     print(sql_to_tree(input_sql))
