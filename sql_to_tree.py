@@ -1,6 +1,4 @@
 #!/usr/bin/python
-
-import sqlparse
 import extract_table_names
 import extract_selected_columns
 import extract_where
@@ -8,31 +6,42 @@ import extract_orderby
 import extract_aggregates
 import extract_having
 
+
 def sql_to_tree(input_sql):
     '''Converts SQL to a SQL tree.  Does not validate that input SQL is correct.
 
     keyword args:
-        input_sql: SQL text input.  May be multiple lines, so long as they are separated by semicolon
-    
-    
+        input_sql: SQL text input.
+            May be multiple lines, so long as they are separated by semicolon
+
+
     returns:
         list of sql tree components
     '''
 #   sql_stream = extract_select_part(sqlparse.parse(sql)[0])
-    
+
     sql_tree = {}
-    
-    #refactor all of these so that they take parsed SQL stream rather than raw SQL
-    sql_tree['select'] = extract_selected_columns.extract_select(input_sql)
-    sql_tree['select aggregate'] = extract_selected_columns.extract_select_aggregates(input_sql)
-    sql_tree['table_definitions'] = extract_table_names.extract_table_definitions(input_sql)
-    sql_tree['joins'] = extract_where.extract_joins(input_sql) #needs support for outer joins
+
+    # refactor all of these so that they take parsed
+    #                           SQL stream rather than raw SQL
+    # need to split out table identifiers
+    sql_tree['select'] = \
+        extract_selected_columns.extract_select(input_sql)
+    # need to split out table identifiers
+    sql_tree['select aggregate'] = \
+        extract_selected_columns.extract_select_aggregates(input_sql)
+    sql_tree['table_definitions'] = \
+        extract_table_names.extract_table_definitions(input_sql)
+    # needs support for outer joins
+    sql_tree['joins'] = extract_where.extract_joins(input_sql)
     sql_tree['filters'] = extract_where.extract_filters(input_sql)
-    sql_tree['where_subqueries'] = extract_where.extract_where_subqueries(input_sql) #need to split out join from subquery
+    # need to split out join from subquery
+    sql_tree['where_subqueries'] = \
+        extract_where.extract_where_subqueries(input_sql)
     sql_tree['grouping'] = extract_aggregates.extract_groupby(input_sql)
     sql_tree['ordering'] = extract_orderby.extract_orderby(input_sql)
     sql_tree['having'] = extract_having.extract_having(input_sql)
-    
+
     return sql_tree
 
 
