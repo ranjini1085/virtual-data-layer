@@ -43,7 +43,7 @@ def extract_filter_identifiers(token_stream):
                      or isinstance(item.left, Parenthesis))
                     and (isinstance(item.right, Identifier)
                     or isinstance(item.right, Parenthesis))):
-                yield (item.left.value, item.right.value)
+                yield (item.left.value, item.right.value.replace("'", ''))
 
 
 def extract_join_identifiers(token_stream):

@@ -33,7 +33,7 @@ def retrieve_s3_file(bucket, filename, folder=None):
 
 
 def file_to_data_structure(local_filename, sql_tree=None):
-    '''converts a local file to a data structure
+    '''converts a local file to a data structure, applying filters along the way
 
     keyword_args:
         local_filename: name of the local CSV that should be converted to a
@@ -70,18 +70,24 @@ def file_to_data_structure(local_filename, sql_tree=None):
 
         # check to see if filter column is in file and map filters to keys
         for i, filter in enumerate(data_filter_sql_tree):
+            filter_key = filter[0]
+            filter_values = filter[1]
 
-            if filter[0] in column_positions:
-                if filter[0] not in data_filter_this_file:
-                    data_filter_this_file[filter[0]] = []
+            if filter_key in column_positions:
+                filter_position = column_positions[filter_key]
+                if filter_position not in data_filter_this_file:
+                    data_filter_this_file[filter_position] = []
+                data_filter_this_file[filter_position].append(filter_values)
 
-                data_filter_this_file[filter[0]].append(filter[1])
-
-        # filter file on filter column while reading into dataset
-
-        # store file columns as a list of lists
+        # read file into data structure, filtering along the way
         for line in lfile:
-            file_data.append(line.strip().split(','))
+            # store file columns as a list of lists
+            line_data = line.strip().split(',')
+            # filter file on filter column while reading into dataset
+            for filter_position in data_filter_this_file.keys():
+                if line_data[filter_position] \
+                        in data_filter_this_file[filter_position]:
+                    file_data.append(line_data)
 
     return column_positions, file_data
 
