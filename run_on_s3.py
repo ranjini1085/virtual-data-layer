@@ -32,7 +32,7 @@ def retrieve_s3_file(bucket, filename, folder=None):
     return local_filename
 
 
-def file_to_data_structure(local_filename):
+def file_to_data_structure(local_filename, sql_tree=None):
     '''converts a local file to a data structure
 
     keyword_args:
@@ -41,6 +41,9 @@ def file_to_data_structure(local_filename):
             assumes that the first column of this file is a header
                         with column column_names
             assumes that this file is comma delimited
+
+        sql_tree (optional): the SQL tree associated with this file,
+                        used to apply filters
 
     returns:
         column positions: a dictionary with a mapping between column names
@@ -52,6 +55,11 @@ def file_to_data_structure(local_filename):
 '''
     file_data = []
     column_positions = {}
+    data_filter_sql_tree = []
+    data_filter_this_file = {}
+
+    if sql_tree is not None and 'filters' in sql_tree:
+        data_filter_sql_tree = sql_tree['filters']
 
     with open(local_filename) as lfile:
         # get names of columns and store in dictionary
@@ -59,6 +67,18 @@ def file_to_data_structure(local_filename):
             lfile.readline().replace('"', '').strip('\n\r').split(',')
         for i, v in enumerate(column_names):
             column_positions[v] = i
+
+        # check to see if filter column is in file and map filters to keys
+        for i, filter in enumerate(data_filter_sql_tree):
+
+            if filter[0] in column_positions:
+                if filter[0] not in data_filter_this_file:
+                    data_filter_this_file[filter[0]] = []
+
+                data_filter_this_file[filter[0]].append(filter[1])
+
+        # filter file on filter column while reading into dataset
+
         # store file columns as a list of lists
         for line in lfile:
             file_data.append(line.strip().split(','))
@@ -116,7 +136,8 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
 
         query_data_column_positions[alias], query_data[alias] = \
             file_to_data_structure(retrieve_s3_file(bucket,
-                                                    s3_filename, s3_folder))
+                                                    s3_filename, s3_folder),
+                                   sql_tree)
 
     # map selected columns to tables
     for k in query_data_column_positions:
@@ -147,7 +168,9 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
 if __name__ == '__main__':
 
     bucket = 'virtual-data-layer'
-    sql = '''select c_custkey, c_name, c_address from tcph.customer'''
+    sql = """select c_custkey, c_name, c_address from tcph.customer
+             where c_custkey = '16252'
+             or c_custkey = '1777'"""
 
     import sql_to_tree
 

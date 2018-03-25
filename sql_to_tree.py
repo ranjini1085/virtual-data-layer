@@ -24,6 +24,7 @@ def sql_to_tree(input_sql):
 
     # refactor all of these so that they take parsed
     #                           SQL stream rather than raw SQL
+
     # need to split out table identifiers
     sql_tree['select'] = \
         extract_selected_columns.extract_select(input_sql)

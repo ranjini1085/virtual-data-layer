@@ -84,7 +84,11 @@ def tree_to_postgres_sql(sql_tree, sql_type):
 
         where_block = sql_tree['joins']
         where_block.extend(sql_tree['where_subqueries'])
-        where_block.extend(sql_tree['filters'])
+
+        for i, v in enumerate(sql_tree['filters']):
+            filter = []
+            filter.append(v[0] + ' = ' + v[1])
+            where_block.extend(filter)
 
         for i, join in enumerate(where_block):
 
