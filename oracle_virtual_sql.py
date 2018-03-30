@@ -2,7 +2,7 @@
 import sql_to_tree
 import tree_to_postgres_sql
 import psycopg2
-import cx_Oracle
+#import cx_Oracle
 
 
 def convert_oracle_to_postgres(input_sql,
@@ -43,9 +43,9 @@ def connect_to_database(target_datastore_type,
         conn_string = target_datastore_username + '/' + \
             target_datastore_password + "@" + target_datastore_url + "/" + \
             target_datastore_dbname
-        conn = cx_Oracle.connect(conn_string)
-        print(conn.version)
-        conn.close
+#        conn = cx_Oracle.connect(conn_string)
+#        print(conn.version)
+#        conn.close
 
         return None
 
