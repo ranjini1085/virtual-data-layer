@@ -16,12 +16,12 @@ def get_credentials(credential_file_name):
 
 '''
     credentials = {}
-    
+
     with open(credential_file_name) as credential_file:
         credential_file_contents = credential_file.read().splitlines()
-        
-        
-        
+
+
+
         for i,v in enumerate(credential_file_contents):
             if v.find('database_url=') != -1:
                 credentials['database_url'] = v.replace('database_url=','')
@@ -31,5 +31,5 @@ def get_credentials(credential_file_name):
                 credentials['username'] = v.replace('username=','')
             if v.find('password=') != -1:
                 credentials['password'] = v.replace('password=','')
-            
+
     return credentials

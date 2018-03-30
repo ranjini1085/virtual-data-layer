@@ -26,7 +26,6 @@ def sql_to_tree(input_sql):
 
     sql_tree['select'] = \
         extract_selected_columns.extract_select(input_sql)
-    # need to split out table identifiers
     sql_tree['select aggregate'] = \
         extract_selected_columns.extract_select_aggregates(input_sql)
     sql_tree['table_definitions'] = \
