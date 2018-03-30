@@ -3,7 +3,8 @@ def get_credentials(credential_file_name):
 
     keyword args:
         credential_file_name = string containing credential file name
-            assumption is that the credential file name will contain the database url, database name, username, and password,
+            assumption is that the credential file name will contain
+            the database url, database name, username, and password,
             and be formatted something like this:
 
             database_url = foo
@@ -20,16 +21,14 @@ def get_credentials(credential_file_name):
     with open(credential_file_name) as credential_file:
         credential_file_contents = credential_file.read().splitlines()
 
-
-
-        for i,v in enumerate(credential_file_contents):
+        for i, v in enumerate(credential_file_contents):
             if v.find('database_url=') != -1:
-                credentials['database_url'] = v.replace('database_url=','')
+                credentials['database_url'] = v.replace('database_url=', '')
             if v.find('database_name=') != -1:
-                credentials['database_name'] = v.replace('database_name=','')
+                credentials['database_name'] = v.replace('database_name=', '')
             if v.find('username=') != -1:
-                credentials['username'] = v.replace('username=','')
+                credentials['username'] = v.replace('username=', '')
             if v.find('password=') != -1:
-                credentials['password'] = v.replace('password=','')
+                credentials['password'] = v.replace('password=', '')
 
     return credentials

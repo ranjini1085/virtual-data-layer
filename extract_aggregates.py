@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sqlparse
+from sqlparse.sql import IdentifierList
 from sqlparse.tokens import Whitespace, Newline, Punctuation
 
 
@@ -42,9 +43,26 @@ def extract_groupby_identifiers(token_stream):
     '''
 
     for item in token_stream:
-        if not (item.ttype is Whitespace
-                or item.ttype is Newline or item.ttype is Punctuation):
-            yield item.value
+        if isinstance(item, IdentifierList):
+            for identifier in item.get_identifiers():
+                if not (identifier.ttype is Whitespace or
+                        identifier.ttype is Newline
+                        or identifier.ttype is Punctuation):
+                            column_identifier = {}
+                            column_identifier['column_name'] =\
+                                identifier.get_real_name()
+                            column_identifier['table_or_alias_name'] =\
+                                identifier.get_parent_name()
+                            yield column_identifier
+        else:
+            if not (item.ttype is Whitespace or item.ttype is Newline
+                    or item.ttype is Punctuation):
+                column_identifier = {}
+                column_identifier['column_name'] =\
+                    item.get_real_name()
+                column_identifier['table_or_alias_name'] =\
+                    item.get_parent_name()
+                yield column_identifier
 
 
 def extract_groupby(sql):
@@ -60,11 +78,27 @@ def extract_groupby(sql):
 
 
 if __name__ == '__main__':
-    sql = """select c.customer_name, o.order_date, sum(order_count)
-            from tcph.customer c, tcph.order o
-            where o.order_id = (select order_id from orders where order_id = 1)
-            group by c.customer_name, o.order_date
-            order by c.customer_name desc, o.order_date asc
-            having sum(order_count) > 1"""
+    input_sql = """
+    select
+        l_returnflag,
+        l_linestatus,
+        sum(l_quantity) as sum_qty,
+        sum(l_extendedprice) as sum_base_price,
+        sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
+        sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
+        avg(l_quantity) as avg_qty,
+        avg(l_extendedprice) as avg_price,
+        avg(l_discount) as avg_disc,
+        count(*) as count_order
+    from
+        lineitem
+    where
+        l_shipdate <= date '1998-12-01' - interval '90' day (3)
+    group by
+        l_returnflag,
+        l_linestatus
+    order by
+        l_returnflag,
+        l_linestatus;"""
 
-    print(extract_groupby(sql))
+    print(extract_groupby(input_sql))

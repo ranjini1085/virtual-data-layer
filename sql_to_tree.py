@@ -44,13 +44,29 @@ def sql_to_tree(input_sql):
 
 
 if __name__ == '__main__':
-    input_sql = """select c.customer_name, o.order_date, sum(o.orders)
-                from tcph.customer as c, tcph.order o, tcph.part
-                where c.customer_id = o.customer_id
-                and o.part_number = tcph.part.part_number
-                and c.customer_id = 1
-                group by c.customer_name, o.order_date
-                order by c.customer_name
-                having sum(o.orders) > 1;"""
 
-    print(sql_to_tree(input_sql))
+    input_sql = """
+    select
+        l_returnflag,
+        l_linestatus,
+        sum(l_quantity) as sum_qty,
+        sum(l_extendedprice) as sum_base_price,
+        sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
+        sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
+        avg(l_quantity) as avg_qty,
+        avg(l_extendedprice) as avg_price,
+        avg(l_discount) as avg_disc,
+        count(*) as count_order
+    from
+        lineitem
+    where
+        l_shipdate <= date '1998-12-01' - interval '90' day (3)
+    group by
+        l_returnflag,
+        l_linestatus
+    order by
+        l_returnflag,
+        l_linestatus;"""
+
+    for k, v in sql_to_tree(input_sql).items():
+        print k, v

@@ -116,9 +116,13 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         groupby_block = sql_tree['grouping']
 
         for i, grouping in enumerate(groupby_block):
-
+            if grouping['table_or_alias_name'] is not None:
+                sql_command += grouping['table_or_alias_name']
+                sql_command += '.'
             # replace non-standard SQL parts with Postgres SQL parts
-            sql_command += syntax_replace_posgres(grouping, sql_type)
+            sql_command += \
+                syntax_replace_posgres(grouping['column_name'],
+                                       sql_type)
 
             if i < len(groupby_block) - 1:
                 sql_command += ', '
@@ -130,8 +134,13 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         orderby_block = sql_tree['ordering']
 
         for i, ordering in enumerate(orderby_block):
+            if ordering['table_or_alias_name'] is not None:
+                sql_command += ordering['table_or_alias_name']
+                sql_command += '.'
             # replace non-standard SQL parts with Postgres SQL parts
-            sql_command += syntax_replace_posgres(ordering, sql_type)
+            sql_command += \
+                syntax_replace_posgres(ordering['column_name'],
+                                       sql_type)
 
             if i < len(orderby_block) - 1:
                 sql_command += ', '

@@ -13,3 +13,4 @@ postgres_connection.txt
 *.pyc
 tcph_1.sql
 tcph_customer
+cmdout.txt
