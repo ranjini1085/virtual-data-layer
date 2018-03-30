@@ -18,14 +18,12 @@ def sql_to_tree(input_sql):
     returns:
         list of sql tree components
     '''
-#   sql_stream = extract_select_part(sqlparse.parse(sql)[0])
 
     sql_tree = {}
 
-    # refactor all of these so that they take parsed
+    # todo: refactor all of these so that they take parsed
     #                           SQL stream rather than raw SQL
 
-    # need to split out table identifiers
     sql_tree['select'] = \
         extract_selected_columns.extract_select(input_sql)
     # need to split out table identifiers

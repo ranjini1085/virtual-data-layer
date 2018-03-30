@@ -52,8 +52,19 @@ def tree_to_postgres_sql(sql_tree, sql_type):
 
         for i, select_field in enumerate(select_block):
 
-            # replace non-standard SQL parts with Postgres SQL parts
-            sql_command += syntax_replace_posgres(select_field, sql_type)
+            # assemble select statment
+            # functions can be added without modifiation
+            # but do we need to look at their syntax as well?
+            if 'function' in select_field.keys():
+                sql_command += select_field['function']
+            else:
+                if select_field['table_or_alias_name'] is not None:
+                    sql_command += select_field['table_or_alias_name']
+                    sql_command += '.'
+                # replace non-standard SQL parts with Postgres SQL parts
+                sql_command += \
+                    syntax_replace_posgres(select_field['column_name'],
+                                           sql_type)
 
             if i < len(select_block) - 1:
                 sql_command += ', '
@@ -148,7 +159,7 @@ if __name__ == '__main__':
 
     import sql_to_tree
 
-    input_sql = """select c.customer_name, o.order_date, sum(o.orders), sysdate
+    input_sql = """select c.customer_name, order_date, sum(o.orders), sysdate
                 from tcph.customer as c, tcph.order o, tcph.part
                 where c.customer_id = o.customer_id
                 and o.part_number = tcph.part.part_number
