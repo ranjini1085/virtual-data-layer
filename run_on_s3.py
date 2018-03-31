@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import boto3
+from botocore.exceptions import EndpointConnectionError
 
 
 def retrieve_s3_file(bucket, filename, folder=None):
@@ -25,8 +26,12 @@ def retrieve_s3_file(bucket, filename, folder=None):
         s3_filename = filename
 
 #   download file
-    with open(local_filename, "wb") as s3_file:
-        s3.download_fileobj(bucket, s3_filename, s3_file)
+    try:
+        None
+        # with open(local_filename, "wb") as s3_file:
+        #    s3.download_fileobj(bucket, s3_filename, s3_file)
+    except EndpointConnectionError:
+        print('cannot connect to S3 bucket')
 
 #   return name of local file
     return local_filename
@@ -50,9 +55,8 @@ def file_to_data_structure(local_filename, sql_tree=None):
                         and column_positions
         file_data: a list of rows from the local file, with each row
                         represented as a list
-
-
 '''
+
     file_data = []
     column_positions = {}
     data_filter_sql_tree = []
@@ -70,24 +74,61 @@ def file_to_data_structure(local_filename, sql_tree=None):
 
         # check to see if filter column is in file and map filters to keys
         for i, filter in enumerate(data_filter_sql_tree):
-            filter_key = filter[0]
-            filter_values = filter[1]
+            filter_identifier = filter['identifier']
+            filter_value = filter['value']
+            filter_operator = filter['operator']
 
-            if filter_key in column_positions:
-                filter_position = column_positions[filter_key]
+            if filter_identifier in column_positions:
+                filter_position = column_positions[filter_identifier]
                 if filter_position not in data_filter_this_file:
                     data_filter_this_file[filter_position] = []
+                filter_values = {}
+                filter_values['operator'] = filter_operator
+                filter_values['value'] = filter_value
                 data_filter_this_file[filter_position].append(filter_values)
 
         # read file into data structure, filtering along the way
         for line in lfile:
             # store file columns as a list of lists
             line_data = line.strip().split(',')
+            # if any filters,
             # filter file on filter column while reading into dataset
-            for filter_position in data_filter_this_file.keys():
-                if line_data[filter_position] \
-                        in data_filter_this_file[filter_position]:
-                    file_data.append(line_data)
+
+            if len(data_filter_this_file) == 0:
+                file_data.append(line_data)
+            elif len(data_filter_this_file) > 0:
+                for filter_position, filter_list in \
+                        data_filter_this_file.items():
+                    for i, filter in enumerate(filter_list):
+                        if filter['operator'] == '=' \
+                                and line_data[filter_position] == \
+                                filter['value'].replace("'", ''):
+                            file_data.append(line_data)
+
+                        if filter['operator'] == '!=' \
+                                and line_data[filter_position] != \
+                                filter['value'].replace("'", ''):
+                            file_data.append(line_data)
+
+                        if filter['operator'] == '>' \
+                                and float(line_data[filter_position]) > \
+                                float(filter['value'].replace("'", '')):
+                            file_data.append(line_data)
+
+                        if filter['operator'] == '>=' \
+                                and float(line_data[filter_position]) >= \
+                                float(filter['value'].replace("'", '')):
+                            file_data.append(line_data)
+
+                        if filter['operator'] == '<' \
+                                and float(line_data[filter_position]) < \
+                                float(filter['value'].replace("'", '')):
+                            file_data.append(line_data)
+
+                        if filter['operator'] == '<=' \
+                                and float(line_data[filter_position]) <= \
+                                float(filter['value'].replace("'", '')):
+                            file_data.append(line_data)
 
     return column_positions, file_data
 
@@ -99,9 +140,10 @@ def map_select_columns_to_data(sql_tree, table_name, column_positions):
     selected_column = {}
 
     for i, v in enumerate(sql_tree['select']):
-
-        if v in column_positions:
-            selected_column[v] = (table_name, column_positions[v])
+        column_name = v['column_name']
+        if column_name in column_positions.keys():
+            selected_column[column_name] = \
+                (table_name, column_positions[column_name])
 
     return selected_column
 
@@ -174,12 +216,21 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
 if __name__ == '__main__':
 
     bucket = 'virtual-data-layer'
-    sql = """select c_custkey, c_name, c_address from tcph.customer
-             where c_custkey = '16252'
-             or c_custkey = '1777'"""
+    input_sql = """select c_custkey,
+             avg(c_acctbal),
+             count(*)
+             from tcph.customer
+             where c_custkey <= 16252'
+             group by c_custkey
+             order by c_cust_key"""
+
+    '''             where c_custkey = '16252'
+             or c_custkey = '1777'''
 
     import sql_to_tree
 
-    sql_tree = sql_to_tree.sql_to_tree(sql)
+    sql_tree = sql_to_tree.sql_to_tree(input_sql)
+    for k, v in sql_tree.items():
+        print(str(k) + ": " + str(v))
     result = exectute_sqltree_on_s3(bucket, sql_tree)
     print(result)

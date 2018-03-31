@@ -107,7 +107,8 @@ def tree_to_postgres_sql(sql_tree, sql_type):
 
         for i, v in enumerate(sql_tree['filters']):
             filter = []
-            filter.append(v['left'] + v['operator'] + v['right'])
+            filter.append(v['identifier'] + ' ' + v['operator'] + ' '
+                          + v['value'])
             where_block.extend(filter)
 
         for i, where_item in enumerate(where_block):

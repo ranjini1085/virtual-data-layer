@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sqlparse
-from sqlparse.sql import Identifier, Comparison, Parenthesis
+from sqlparse.sql import Identifier, Comparison, Parenthesis, Token
 from sqlparse.tokens import Keyword, Whitespace, Newline, Punctuation
 
 
@@ -40,17 +40,43 @@ def extract_filter_identifiers(token_stream):
     for item in token_stream:
         if isinstance(item, Comparison):
             comparison_identifier = {}
+            # make sure that this is a filter and not a join or subquery
             if not ((isinstance(item.left, Identifier)
                      or isinstance(item.left, Parenthesis))
                     and (isinstance(item.right, Identifier)
                     or isinstance(item.right, Parenthesis))):
-                comparison_identifier['left'] = item.left.value
-                comparison_identifier['right'] =\
-                    item.right.value.replace("'", '')
+                # if left part of filter is an identifier, mark it as such
+                # otherwise, mark it as the value in the filter
+                if(isinstance(item.left, Identifier)):
+                    comparison_identifier['identifier'] = \
+                        item.left.value.replace("''", '')
+                else:
+                    comparison_identifier['value'] = \
+                        item.left.value.replace("''", '')
+                # if right part of filter is an identifier, mark it as such
+                # otherwise, mark it as the value in the filter
+                if(isinstance(item.right, Identifier)):
+                    comparison_identifier['identifier'] = \
+                        item.right.value.replace("''", '')
+                else:
+                    comparison_identifier['value'] = \
+                        item.right.value.replace("''", '')
+
+                # sqlparse doesn't have a function to extract the operator,
+                # so we will do it by removing the other parts of the filter
                 operator = item.value.replace(item.left.value, '')
                 operator = operator.replace(item.right.value, '')
                 operator = operator.replace(' ', '')
+
+                # subsequent uses of this will assume value is on the right
+                # so if value is on the left, reverse operator
+                if not (isinstance(item.left, Identifier)):
+                    if '>' in operator:
+                        operator = operator.replace('>', '<')
+                    elif '<' in operator:
+                        operator = operator.replace('<', '>')
                 comparison_identifier['operator'] = operator
+
                 yield comparison_identifier
 
 
@@ -142,7 +168,8 @@ if __name__ == '__main__':
     from
         lineitem
     where
-        l_shipdate <= '1998-12-01'
+        l_shipdate <= '1998-12-01' and
+        l_quantity > '1'
     group by
         l_returnflag,
         l_linestatus
