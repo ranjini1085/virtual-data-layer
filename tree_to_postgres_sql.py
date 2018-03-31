@@ -94,17 +94,17 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         sql_command += ' where '
 
         where_block = sql_tree['joins']
-        where_block.extend(sql_tree['where_subqueries'])
+        # where_block.extend(sql_tree['where_subqueries'])
 
         for i, v in enumerate(sql_tree['filters']):
             filter = []
-            filter.append(v[0] + ' = ' + v[1])
+            filter.append(v['left'] + v['operator'] + v['right'])
             where_block.extend(filter)
 
-        for i, join in enumerate(where_block):
+        for i, where_item in enumerate(where_block):
 
             # replace non-standard SQL parts with Postgres SQL parts
-            sql_command += syntax_replace_posgres(join, sql_type)
+            sql_command += syntax_replace_posgres(where_item, sql_type)
 
             if i < len(where_block) - 1:
                 sql_command += ' and '

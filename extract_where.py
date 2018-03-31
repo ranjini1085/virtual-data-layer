@@ -39,11 +39,19 @@ def extract_filter_identifiers(token_stream):
 
     for item in token_stream:
         if isinstance(item, Comparison):
+            comparison_identifier = {}
             if not ((isinstance(item.left, Identifier)
                      or isinstance(item.left, Parenthesis))
                     and (isinstance(item.right, Identifier)
                     or isinstance(item.right, Parenthesis))):
-                yield (item.left.value, item.right.value.replace("'", ''))
+                comparison_identifier['left'] = item.left.value
+                comparison_identifier['right'] =\
+                    item.right.value.replace("'", '')
+                operator = item.value.replace(item.left.value, '')
+                operator = operator.replace(item.right.value, '')
+                operator = operator.replace(' ', '')
+                comparison_identifier['operator'] = operator
+                yield comparison_identifier
 
 
 def extract_join_identifiers(token_stream):
@@ -119,12 +127,29 @@ def extract_where_subqueries(sql):
 
 
 if __name__ == '__main__':
-    sql = """select c.customer_name, o.order_date
-            from tcph.customer c, tcph.order o
-            where o.order_id = (select order_id from orders where order_id = 1)
-            and c.customer_name = 'Tony'
-        """
+    input_sql = """
+    select
+        l_returnflag,
+        l_linestatus,
+        sum(l_quantity) as sum_qty,
+        sum(l_extendedprice) as sum_base_price,
+        sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
+        sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
+        avg(l_quantity) as avg_qty,
+        avg(l_extendedprice) as avg_price,
+        avg(l_discount) as avg_disc,
+        count(*) as count_order
+    from
+        lineitem
+    where
+        l_shipdate <= '1998-12-01'
+    group by
+        l_returnflag,
+        l_linestatus
+    order by
+        l_returnflag,
+        l_linestatus;"""
 
-    print('joins: '+str(extract_joins(sql)))
-    print('filters: '+str(extract_filters(sql)))
-    print('subselects: '+str(extract_where_subqueries(sql)))
+    print('joins: '+str(extract_joins(input_sql)))
+    print('filters: '+str(extract_filters(input_sql)))
+    print('subselects: '+str(extract_where_subqueries(input_sql)))
