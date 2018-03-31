@@ -26,11 +26,15 @@ def sql_to_tree(input_sql):
 
     sql_tree['select'] = \
         extract_selected_columns.extract_select(input_sql)
+    # sqlparse doesn't properly support aliases for aggregates
+    # sqlparse also doesn't properly support expressions within an aggregate
+    #   so this doesn't yet support either of those
     sql_tree['select aggregate'] = \
         extract_selected_columns.extract_select_aggregates(input_sql)
     sql_tree['table_definitions'] = \
         extract_table_names.extract_table_definitions(input_sql)
     # needs support for outer joins
+    # needs to support table/schema/alias format
     sql_tree['joins'] = extract_where.extract_joins(input_sql)
     sql_tree['filters'] = extract_where.extract_filters(input_sql)
     # need to split out join from subquery
@@ -49,14 +53,12 @@ if __name__ == '__main__':
     select
         l_returnflag,
         l_linestatus,
-        sum(l_quantity) as sum_qty,
-        sum(l_extendedprice) as sum_base_price,
-        sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
-        sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
-        avg(l_quantity) as avg_qty,
-        avg(l_extendedprice) as avg_price,
-        avg(l_discount) as avg_disc,
-        count(*) as count_order
+        sum(l_quantity),
+        sum(l_extendedprice),
+        avg(l_quantity),
+        avg(l_extendedprice),
+        avg(l_discount),
+        count(*)
     from
         lineitem
     where

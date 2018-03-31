@@ -53,10 +53,19 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         for i, select_field in enumerate(select_block):
 
             # assemble select statment
-            # functions can be added without modifiation
-            # but do we need to look at their syntax as well?
             if 'function' in select_field.keys():
                 sql_command += select_field['function']
+                sql_command += '('
+                if 'table_or_alias_name' in select_field.keys() \
+                        and select_field['table_or_alias_name'] is not None:
+                    sql_command += select_field['table_or_alias_name']
+                    sql_command += '.'
+                if 'column_name' in select_field.keys() \
+                        and select_field['column_name'] is not None:
+                    sql_command += select_field['column_name']
+                else:
+                    sql_command += '*'
+                sql_command += ')'
             else:
                 if select_field['table_or_alias_name'] is not None:
                     sql_command += select_field['table_or_alias_name']
@@ -168,6 +177,30 @@ if __name__ == '__main__':
 
     import sql_to_tree
 
+    input_sql = """
+        select
+            l_returnflag,
+            l_linestatus,
+            sum(l_quantity),
+            sum(l_extendedprice),
+            avg(l_quantity),
+            avg(l_extendedprice),
+            avg(l_discount),
+            count(*)
+        from
+            lineitem
+        where
+            l_shipdate <= '1998-12-01'
+        group by
+            l_returnflag,
+            l_linestatus
+        order by
+            l_returnflag,
+            l_linestatus;"""
+
+    print(tree_to_postgres_sql(sql_to_tree.sql_to_tree(input_sql), 'Oracle'))
+
+'''
     input_sql = """select c.customer_name, order_date, sum(o.orders), sysdate
                 from tcph.customer as c, tcph.order o, tcph.part
                 where c.customer_id = o.customer_id
@@ -175,5 +208,4 @@ if __name__ == '__main__':
                 and c.customer_id = 1
                 group by c.customer_name, o.order_date
                 order by c.customer_name;"""
-
-    print(tree_to_postgres_sql(sql_to_tree.sql_to_tree(input_sql), 'Oracle'))
+                '''

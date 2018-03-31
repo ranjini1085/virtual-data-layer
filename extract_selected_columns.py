@@ -86,7 +86,7 @@ def extract_selected_aggregates(token_stream):
             for identifier in item.get_identifiers():
                 column_identifier = {}
                 if isinstance(identifier, Function):
-                    column_identifier['function'] = identifier.value
+                    column_identifier['function'] = identifier.get_real_name()
                     if len(identifier.get_parameters()) > 0:
                         for item in identifier.get_parameters():
                             column_identifier['column_name'] =\
@@ -134,13 +134,26 @@ def extract_select_aggregates(sql):
 
 if __name__ == '__main__':
 
-    sql = """select c.customer_name, o.order_date, sum(o.order_count), count(*)
-            from tcph.customer c, tcph.order o
-            where c.customer_id = o.customer_id
-            and c.customer_id = o.customer_id
-            group by c.customer_name, o.order_date;"""
+    input_sql = """
+    select
+        l_returnflag,
+        l_linestatus,
+        sum(l_quantity),
+        sum(l_extendedprice),
+        avg(l_quantity),
+        avg(l_extendedprice),
+        avg(l_discount),
+        count(*)
+    from
+        lineitem
+    where
+        l_shipdate <= '1998-12-01'
+    group by
+        l_returnflag,
+        l_linestatus
+    order by
+        l_returnflag,
+        l_linestatus;"""
 
-#    sql= """select a, sum(b) from (select c,d from dual) group by a"""
-
-    print(extract_select(sql))
-    print(extract_select_aggregates(sql))
+    print(extract_select(input_sql))
+    print(extract_select_aggregates(input_sql))
