@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import boto3
+import csv
 from botocore.exceptions import EndpointConnectionError
 
 
@@ -65,12 +66,22 @@ def file_to_data_structure(local_filename, sql_tree=None):
     if sql_tree is not None and 'filters' in sql_tree:
         data_filter_sql_tree = sql_tree['filters']
 
-    with open(local_filename) as lfile:
+    '''with open(local_filename) as lfile:
         # get names of columns and store in dictionary
         column_names = \
             lfile.readline().replace('"', '').strip('\n\r').split(',')
         for i, v in enumerate(column_names):
+            column_positions[v] = i'''
+
+    with open(local_filename, "rb") as lfile:
+        lfile_reader = csv.reader(lfile, delimiter=',', quotechar='"')
+
+        column_names = \
+            lfile_reader.next()
+
+        for i, v in enumerate(column_names):
             column_positions[v] = i
+
 
         # check to see if filter column is in file and map filters to keys
         for i, filter in enumerate(data_filter_sql_tree):
@@ -88,9 +99,8 @@ def file_to_data_structure(local_filename, sql_tree=None):
                 data_filter_this_file[filter_position].append(filter_values)
 
         # read file into data structure, filtering along the way
-        for line in lfile:
-            # store file columns as a list of lists
-            line_data = line.strip().split(',')
+        # for line in lfile:
+        for line_data in lfile_reader:
             # if any filters,
             # filter file on filter column while reading into dataset
 
@@ -138,13 +148,15 @@ def map_select_columns_to_data(sql_tree, table_name, column_positions):
 
 '''
     selected_column = {}
+    select_identifiers = sql_tree['select']
+    select_identifiers.extend(sql_tree['select aggregate'])
 
-    for i, v in enumerate(sql_tree['select']):
-        column_name = v['column_name']
+    for i, v in enumerate(select_identifiers):
+        if v['column_name'] is not None:
+            column_name = v['column_name']
         if column_name in column_positions.keys():
             selected_column[column_name] = \
                 (table_name, column_positions[column_name])
-
     return selected_column
 
 
@@ -193,7 +205,7 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
                 map_select_columns_to_data(sql_tree, k,
                                            query_data_column_positions[k]))
 
-    # apply joins and filters
+    # apply joins
 
     # select columns from specified dataset
     for i, column in enumerate(selected_columns):
@@ -217,7 +229,7 @@ if __name__ == '__main__':
 
     bucket = 'virtual-data-layer'
     input_sql = """select c_custkey,
-             avg(c_acctbal),
+             c_acctbal,
              count(*)
              from tcph.customer
              where c_custkey <= 16252'
