@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import boto3
 import csv
+from operator import itemgetter
 from botocore.exceptions import EndpointConnectionError
 
 
@@ -66,22 +67,12 @@ def file_to_data_structure(local_filename, sql_tree=None):
     if sql_tree is not None and 'filters' in sql_tree:
         data_filter_sql_tree = sql_tree['filters']
 
-    '''with open(local_filename) as lfile:
-        # get names of columns and store in dictionary
-        column_names = \
-            lfile.readline().replace('"', '').strip('\n\r').split(',')
-        for i, v in enumerate(column_names):
-            column_positions[v] = i'''
-
     with open(local_filename, "rb") as lfile:
         lfile_reader = csv.reader(lfile, delimiter=',', quotechar='"')
 
-        column_names = \
-            lfile_reader.next()
-
+        column_names = lfile_reader.next()
         for i, v in enumerate(column_names):
             column_positions[v] = i
-
 
         # check to see if filter column is in file and map filters to keys
         for i, filter in enumerate(data_filter_sql_tree):
@@ -103,7 +94,6 @@ def file_to_data_structure(local_filename, sql_tree=None):
         for line_data in lfile_reader:
             # if any filters,
             # filter file on filter column while reading into dataset
-
             if len(data_filter_this_file) == 0:
                 file_data.append(line_data)
             elif len(data_filter_this_file) > 0:
@@ -165,17 +155,16 @@ def transpose_columns_to_rows(selected_data_in_columns):
 
 '''
     selected_data_in_rows = []
+    selected_data_headers = list(selected_data_in_columns.keys())
 
-    keys_list = list(selected_data_in_columns.keys())
-    selected_data_in_rows.append(keys_list)
-
-    for row, value in enumerate(selected_data_in_columns[keys_list[0]]):
+    for row, value in \
+            enumerate(selected_data_in_columns[selected_data_headers[0]]):
         row_data = []
         for k in selected_data_in_columns.keys():
             row_data.append(selected_data_in_columns[k][row])
         selected_data_in_rows.append(row_data)
 
-    return selected_data_in_rows
+    return selected_data_headers, selected_data_in_rows
 
 
 def exectute_sqltree_on_s3(bucket, sql_tree):
@@ -220,10 +209,19 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
     # apply aggregates and having
 
     # apply order by
+    selected_headers, selected_rows = transpose_columns_to_rows(selected_data)
+    ordered_data = [selected_headers]
 
-#    selected_data_in_rows =
-    return transpose_columns_to_rows(selected_data)
+    # add support for extracing the columns to be ordered
+    # add support for ordering asc or desc
+    # figure out how to sort on multiple keys
+    if 'ordering' in sql_tree.keys():
+    #    for i, order_item sql_tree['ordering'].items():
+        ordered_data.extend(sorted(selected_rows, key=lambda i: float(i[0])))
+    else:
+        ordered_data.extend(selected_rows)
 
+    return ordered_data
 
 if __name__ == '__main__':
 

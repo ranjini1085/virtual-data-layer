@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sqlparse
-from sqlparse.sql import Identifier, Comparison, Parenthesis, Token
+from sqlparse.sql import Identifier, Comparison, Parenthesis
 from sqlparse.tokens import Keyword, Whitespace, Newline, Punctuation
 
 
