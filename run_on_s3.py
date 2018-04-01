@@ -30,8 +30,8 @@ def retrieve_s3_file(bucket, filename, folder=None):
 #   download file
     try:
         None
-        # with open(local_filename, "wb") as s3_file:
-        #    s3.download_fileobj(bucket, s3_filename, s3_file)
+        with open(local_filename, "wb") as s3_file:
+            s3.download_fileobj(bucket, s3_filename, s3_file)
     except EndpointConnectionError:
         print('cannot connect to S3 bucket')
 
@@ -67,68 +67,68 @@ def file_to_data_structure(local_filename, sql_tree=None):
     if sql_tree is not None and 'filters' in sql_tree:
         data_filter_sql_tree = sql_tree['filters']
 
-    with open(local_filename, "rb") as lfile:
-        lfile_reader = csv.reader(lfile, delimiter=',', quotechar='"')
+    lfile_reader = csv.reader(open(local_filename, newline=''),
+                              delimiter=',', quotechar='"')
 
-        column_names = lfile_reader.next()
-        for i, v in enumerate(column_names):
-            column_positions[v] = i
+    column_names = lfile_reader.__next__()
+    for i, v in enumerate(column_names):
+        column_positions[v] = i
 
-        # check to see if filter column is in file and map filters to keys
-        for i, filter in enumerate(data_filter_sql_tree):
-            filter_identifier = filter['identifier']
-            filter_value = filter['value']
-            filter_operator = filter['operator']
+    # check to see if filter column is in file and map filters to keys
+    for i, filter in enumerate(data_filter_sql_tree):
+        filter_identifier = filter['identifier']
+        filter_value = filter['value']
+        filter_operator = filter['operator']
 
-            if filter_identifier in column_positions:
-                filter_position = column_positions[filter_identifier]
-                if filter_position not in data_filter_this_file:
-                    data_filter_this_file[filter_position] = []
-                filter_values = {}
-                filter_values['operator'] = filter_operator
-                filter_values['value'] = filter_value
-                data_filter_this_file[filter_position].append(filter_values)
+        if filter_identifier in column_positions:
+            filter_position = column_positions[filter_identifier]
+            if filter_position not in data_filter_this_file:
+                data_filter_this_file[filter_position] = []
+            filter_values = {}
+            filter_values['operator'] = filter_operator
+            filter_values['value'] = filter_value
+            data_filter_this_file[filter_position].append(filter_values)
 
-        # read file into data structure, filtering along the way
-        # for line in lfile:
-        for line_data in lfile_reader:
-            # if any filters,
-            # filter file on filter column while reading into dataset
-            if len(data_filter_this_file) == 0:
-                file_data.append(line_data)
-            elif len(data_filter_this_file) > 0:
-                for filter_position, filter_list in \
-                        data_filter_this_file.items():
-                    for i, filter in enumerate(filter_list):
-                        if filter['operator'] == '=' \
-                                and line_data[filter_position] == \
-                                filter['value'].replace("'", ''):
-                            file_data.append(line_data)
+    # read file into data structure, filtering along the way
+    # for line in lfile:
+    for line_data in lfile_reader:
+        # if any filters,
+        # filter file on filter column while reading into dataset
+        if len(data_filter_this_file) == 0:
+            file_data.append(line_data)
+        elif len(data_filter_this_file) > 0:
+            for filter_position, filter_list in \
+                    data_filter_this_file.items():
+                for i, filter in enumerate(filter_list):
+                    if filter['operator'] == '=' \
+                            and line_data[filter_position] == \
+                            filter['value'].replace("'", ''):
+                        file_data.append(line_data)
 
-                        if filter['operator'] == '!=' \
-                                and line_data[filter_position] != \
-                                filter['value'].replace("'", ''):
-                            file_data.append(line_data)
+                    if filter['operator'] == '!=' \
+                            and line_data[filter_position] != \
+                            filter['value'].replace("'", ''):
+                        file_data.append(line_data)
 
-                        if filter['operator'] == '>' \
-                                and float(line_data[filter_position]) > \
-                                float(filter['value'].replace("'", '')):
-                            file_data.append(line_data)
+                    if filter['operator'] == '>' \
+                            and float(line_data[filter_position]) > \
+                            float(filter['value'].replace("'", '')):
+                        file_data.append(line_data)
 
-                        if filter['operator'] == '>=' \
-                                and float(line_data[filter_position]) >= \
-                                float(filter['value'].replace("'", '')):
-                            file_data.append(line_data)
+                    if filter['operator'] == '>=' \
+                            and float(line_data[filter_position]) >= \
+                            float(filter['value'].replace("'", '')):
+                        file_data.append(line_data)
 
-                        if filter['operator'] == '<' \
-                                and float(line_data[filter_position]) < \
-                                float(filter['value'].replace("'", '')):
-                            file_data.append(line_data)
+                    if filter['operator'] == '<' \
+                            and float(line_data[filter_position]) < \
+                            float(filter['value'].replace("'", '')):
+                        file_data.append(line_data)
 
-                        if filter['operator'] == '<=' \
-                                and float(line_data[filter_position]) <= \
-                                float(filter['value'].replace("'", '')):
-                            file_data.append(line_data)
+                    if filter['operator'] == '<=' \
+                            and float(line_data[filter_position]) <= \
+                            float(filter['value'].replace("'", '')):
+                        file_data.append(line_data)
 
     return column_positions, file_data
 

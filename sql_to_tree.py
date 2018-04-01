@@ -71,4 +71,4 @@ if __name__ == '__main__':
         l_linestatus;"""
 
     for k, v in sql_to_tree(input_sql).items():
-        print k, v
+        print(k, v)
