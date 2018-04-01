@@ -208,13 +208,17 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
     # apply aggregates and having
 
     # apply order by
-    selection_headers, selected_rows = transpose_columns_to_rows(selected_data)
-    ordered_data = [selection_headers]
-
     # add support for ordering asc or desc
     # add support for column definitions so we can determine how to sort
     # assumes sorting on numbers for now
-    if 'ordering' in sql_tree.keys():
+
+    selection_headers, selected_rows = transpose_columns_to_rows(selected_data)
+    ordered_data = [selection_headers]
+
+    # only apply the sort if there are fields in the
+    #   ordering part of the sql tree
+    if len(sql_tree['ordering']) > 0:
+        # build a lambda function for the sort
         order_fields_func = 'lambda i: ('
         for i, order_item in enumerate(sql_tree['ordering']):
             order_column_name = order_item['column_name']
@@ -226,7 +230,10 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
         order_fields_func = order_fields_func.rstrip(',')
         order_fields_func += ')'
         order_fields_func = eval(order_fields_func)
+
+        # sort based on fields in lambda function
         ordered_data.extend(sorted(selected_rows, key=order_fields_func))
+    # otherwise, just return unsorted rows
     else:
         ordered_data.extend(selected_rows)
 
