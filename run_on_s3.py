@@ -208,19 +208,30 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
     # apply aggregates and having
 
     # apply order by
-    selected_headers, selected_rows = transpose_columns_to_rows(selected_data)
-    ordered_data = [selected_headers]
+    selection_headers, selected_rows = transpose_columns_to_rows(selected_data)
+    ordered_data = [selection_headers]
 
-    # add support for extracing the columns to be ordered
     # add support for ordering asc or desc
-    # figure out how to sort on multiple keys
+    # add support for column definitions so we can determine how to sort
+    # assumes sorting on numbers for now
     if 'ordering' in sql_tree.keys():
-    #    for i, order_item sql_tree['ordering'].items():
-        ordered_data.extend(sorted(selected_rows, key=lambda i: float(i[0])))
+        order_fields_func = 'lambda i: ('
+        for i, order_item in enumerate(sql_tree['ordering']):
+            order_column_name = order_item['column_name']
+            if order_column_name in selection_headers:
+                    sort_item = 'float(i[' + \
+                        str(selection_headers.index(order_column_name)) + \
+                        ']),'
+                    order_fields_func += sort_item
+        order_fields_func = order_fields_func.rstrip(',')
+        order_fields_func += ')'
+        order_fields_func = eval(order_fields_func)
+        ordered_data.extend(sorted(selected_rows, key=order_fields_func))
     else:
         ordered_data.extend(selected_rows)
 
     return ordered_data
+
 
 if __name__ == '__main__':
 
@@ -231,7 +242,8 @@ if __name__ == '__main__':
              from tcph.customer
              where c_custkey <= 16252'
              group by c_custkey
-             order by c_cust_key"""
+             order by c_acctbal,
+             c_custkey"""
 
     '''             where c_custkey = '16252'
              or c_custkey = '1777'''
