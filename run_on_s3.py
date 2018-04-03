@@ -171,6 +171,7 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
     query_data_column_positions = {}
     selected_columns = []
     selected_data = {}
+    post_join_row_count = 0
 
     # download files in query and map to data structures
     for table_definition in sql_tree['table_definitions']:
@@ -193,8 +194,6 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
                 map_select_columns_to_data(sql_tree, k,
                                            query_data_column_positions[k]))
 
-    # apply joins
-
     # select columns from specified dataset
     for i, column in enumerate(selected_columns):
         for k in column.keys():
@@ -205,9 +204,55 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
             for row in query_data[select_table]:
                 selected_data[k].append(row[selected_column_position])
 
-    # apply aggregates and having
+    # apply joins
 
-    # apply order by
+    # get length of resulting dataset
+    for k in selected_data.keys():
+        column_length = len(selected_data[k])
+        if column_length > post_join_row_count:
+            post_join_row_count = column_length
+
+    # apply aggregates and having
+    if len(sql_tree['grouping']) > 0:
+        grouping_columns = []
+        grouping_rows = {}
+
+        # step 1: map group bys to columns
+        for i, grouping_item in enumerate(sql_tree['grouping']):
+            try:
+                column_name = grouping_item['column_name']
+                grouping_columns.append(column_name)
+            except KeyError as e:
+                print(e)
+
+        # step 2: get distint values from group by columns
+        #   and denote the rows for each distinct value
+        for row in range(post_join_row_count):
+            unique_grouping = []
+            try:
+                for k, column in enumerate(grouping_columns):
+                    unique_grouping.append(selected_data[column][row])
+            except KeyError as e:
+                print(e)
+
+            if repr(unique_grouping) not in grouping_rows.keys():
+                grouping_rows[repr(unique_grouping)] = []
+
+            grouping_rows[repr(unique_grouping)].append(row)
+
+        #step 3: aggregate all rows for each distinct value combination
+
+        # build base dataset from unique groupings
+        aggregated_data = {}
+
+        # aggregate all rows for each distinct value combination
+        if len(sql_tree['select aggregate']) > 0:
+            None
+
+        
+
+    # move from columnar to row orientation and apply order by
+
     # add support for ordering asc or desc
     # add support for column definitions so we can determine how to sort
     # assumes sorting on numbers for now
@@ -243,19 +288,19 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
 if __name__ == '__main__':
 
     bucket = 'virtual-data-layer'
-    input_sql = """select c_custkey,
-             c_acctbal,
+    input_sql = """select c_mktsegment
+             sum(c_acctbal),
              count(*)
              from tcph.customer
-             where c_custkey <= 16252'
-             group by c_custkey
-             order by c_acctbal,
-             c_custkey"""
+             where c_custkey = '16252'
+             or c_custkey = '44668'
+             group by c_mktsegment
+             order by c_acctbal"""
 
     import sql_to_tree
 
     sql_tree = sql_to_tree.sql_to_tree(input_sql)
-    for k, v in sql_tree.items():
-        print(str(k) + ": " + str(v))
+    #for k, v in sql_tree.items():
+    #     print(str(k) + ": " + str(v))
     result = exectute_sqltree_on_s3(bucket, sql_tree)
     print(result)
