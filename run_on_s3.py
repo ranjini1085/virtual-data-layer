@@ -240,16 +240,12 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
 
             grouping_rows[repr(unique_grouping)].append(row)
 
-        #step 3: aggregate all rows for each distinct value combination
-
-        # build base dataset from unique groupings
+        # setp 3: build base dataset from unique groupings
         aggregated_data = {}
 
-        # aggregate all rows for each distinct value combination
+        # step 4: aggregate all rows for each distinct value combination
         if len(sql_tree['select aggregate']) > 0:
             None
-
-        
 
     # move from columnar to row orientation and apply order by
 
