@@ -104,27 +104,27 @@ def file_to_data_structure(local_filename, sql_tree=None):
                             filter['value'].replace("'", ''):
                         file_data.append(line_data)
 
-                    if filter['operator'] == '!=' \
+                    elif filter['operator'] == '!=' \
                             and line_data[filter_position] != \
                             filter['value'].replace("'", ''):
                         file_data.append(line_data)
 
-                    if filter['operator'] == '>' \
+                    elif filter['operator'] == '>' \
                             and float(line_data[filter_position]) > \
                             float(filter['value'].replace("'", '')):
                         file_data.append(line_data)
 
-                    if filter['operator'] == '>=' \
+                    elif filter['operator'] == '>=' \
                             and float(line_data[filter_position]) >= \
                             float(filter['value'].replace("'", '')):
                         file_data.append(line_data)
 
-                    if filter['operator'] == '<' \
+                    elif filter['operator'] == '<' \
                             and float(line_data[filter_position]) < \
                             float(filter['value'].replace("'", '')):
                         file_data.append(line_data)
 
-                    if filter['operator'] == '<=' \
+                    elif filter['operator'] == '<=' \
                             and float(line_data[filter_position]) <= \
                             float(filter['value'].replace("'", '')):
                         file_data.append(line_data)
@@ -251,9 +251,6 @@ if __name__ == '__main__':
              group by c_custkey
              order by c_acctbal,
              c_custkey"""
-
-    '''             where c_custkey = '16252'
-             or c_custkey = '1777'''
 
     import sql_to_tree
 
