@@ -15,3 +15,4 @@ tcph_1.sql
 tcph_customer
 cmdout.txt
 *.csv
+tcph_lineitem
