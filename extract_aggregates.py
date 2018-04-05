@@ -15,7 +15,7 @@ def extract_groupby_part(parsed):
         returns:
             each "group by" portion of the query until no more remain
     '''
-    where_seen = False
+    group_seen = False
     group_by_seen = False
 
     for item in parsed.tokens:
@@ -23,10 +23,10 @@ def extract_groupby_part(parsed):
             raise StopIteration
         if group_by_seen is True and item.value.upper() != 'BY':
             yield item
-        if where_seen is True and item.value.upper() == 'GROUP':
+        if item.value.upper() == 'GROUP':
+            group_seen = True
+        if group_seen == True and item.value.upper() == 'BY':
             group_by_seen = True
-        if isinstance(item, sqlparse.sql.Where):
-            where_seen = True
 
 
 def extract_groupby_identifiers(token_stream):

@@ -243,9 +243,59 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
         # setp 3: build base dataset from unique groupings
         aggregated_data = {}
 
+        for i, v in enumerate(grouping_columns):
+            aggregated_data[grouping_columns[i]] = []
+
+        for k in grouping_rows.keys():
+            unique_record = k.strip("[]'")
+            for i, v in enumerate(unique_record.split(',')):
+                aggregated_data[grouping_columns[i]].append(v)
+
         # step 4: aggregate all rows for each distinct value combination
         if len(sql_tree['select aggregate']) > 0:
-            None
+            for i, aggregate in enumerate(sql_tree['select aggregate']):
+                if aggregate['column_name'] is not None:
+                    aggregate_name = aggregate['function'] + \
+                        '_' + aggregate['column_name']
+                else:
+                    aggregate_name = aggregate['function']
+
+                aggregated_data[aggregate_name] = []
+
+                for unique_record, rows in grouping_rows.items():
+                    if aggregate['column_name'] is not None:
+                        group_list = []
+                        for i, row in enumerate(rows):
+                            group_list.append(
+                                selected_data[aggregate['column_name']][row])
+
+                        if aggregate['function'] == 'count':
+                            aggregated_data[aggregate_name].append(
+                                str(len(set(group_list))))
+
+                        elif aggregate['function'] == 'sum':
+                            aggregated_data[aggregate_name].append(
+                                str(sum([float(i) for i in group_list])))
+
+                        elif aggregate['function'] == 'max':
+                            aggregated_data[aggregate_name].append(
+                                str(max([float(i) for i in group_list])))
+
+                        elif aggregate['function'] == 'min':
+                            aggregated_data[aggregate_name].append(
+                                str(min([float(i) for i in group_list])))
+
+                        elif aggregate['function'] == 'avg':
+                            aggregated_data[aggregate_name].append(
+                                str(sum([float(i) for i in group_list])
+                                    / len(group_list)))
+
+                    elif aggregate['column_name'] is None and \
+                            aggregate['function'] == 'count':
+                        aggregated_data[aggregate_name].append(
+                            str(len(set(rows))))
+
+        selected_data = aggregated_data
 
     # move from columnar to row orientation and apply order by
 
@@ -286,17 +336,17 @@ if __name__ == '__main__':
     bucket = 'virtual-data-layer'
     input_sql = """select c_mktsegment
              sum(c_acctbal),
+             avg(c_acctbal),
+             min(c_acctbal),
+             max(c_acctbal),
              count(*)
              from tcph.customer
-             where c_custkey = '16252'
-             or c_custkey = '44668'
-             group by c_mktsegment
-             order by c_acctbal"""
+             group by c_mktsegment"""
 
     import sql_to_tree
 
     sql_tree = sql_to_tree.sql_to_tree(input_sql)
-    #for k, v in sql_tree.items():
-    #     print(str(k) + ": " + str(v))
+    for k, v in sql_tree.items():
+         print(str(k) + ": " + str(v))
     result = exectute_sqltree_on_s3(bucket, sql_tree)
     print(result)
