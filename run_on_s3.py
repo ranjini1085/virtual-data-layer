@@ -334,19 +334,29 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
 if __name__ == '__main__':
 
     bucket = 'virtual-data-layer'
-    input_sql = """select c_mktsegment
-             sum(c_acctbal),
-             avg(c_acctbal),
-             min(c_acctbal),
-             max(c_acctbal),
-             count(*)
-             from tcph.customer
-             group by c_mktsegment"""
+    input_sql = """
+        select
+            l_returnflag,
+            l_linestatus,
+            sum(l_quantity),
+            sum(l_extendedprice),
+            avg(l_quantity),
+            avg(l_extendedprice),
+            avg(l_discount),
+            count(*)
+        from
+            tcph.lineitem
+        group by
+            l_returnflag,
+            l_linestatus
+        order by
+            l_returnflag,
+            l_linestatus;"""
 
     import sql_to_tree
 
     sql_tree = sql_to_tree.sql_to_tree(input_sql)
-    for k, v in sql_tree.items():
-         print(str(k) + ": " + str(v))
+    # for k, v in sql_tree.items():
+    #     print(str(k) + ": " + str(v))
     result = exectute_sqltree_on_s3(bucket, sql_tree)
     print(result)

@@ -14,3 +14,4 @@ postgres_connection.txt
 tcph_1.sql
 tcph_customer
 cmdout.txt
+*.csv

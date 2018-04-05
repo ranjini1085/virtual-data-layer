@@ -25,7 +25,7 @@ def extract_groupby_part(parsed):
             yield item
         if item.value.upper() == 'GROUP':
             group_seen = True
-        if group_seen == True and item.value.upper() == 'BY':
+        if group_seen is True and item.value.upper() == 'BY':
             group_by_seen = True
 
 
