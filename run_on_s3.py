@@ -26,11 +26,17 @@ def retrieve_s3_file(bucket, filename, folder=None):
         local_filename = filename
         s3_filename = filename
 
+    local_header_filename = local_filename + '_header'
+    s3_header_filename = s3_filename + '_header'
+
+
 #   download file
     try:
-        None
         with open(local_filename, "wb") as s3_file:
             s3.download_fileobj(bucket, s3_filename, s3_file)
+
+        with open(local_header_filename, "wb") as s3_file:
+            s3.download_fileobj(bucket, s3_header_filename, s3_file)
     except EndpointConnectionError:
         print('cannot connect to S3 bucket')
 
@@ -60,8 +66,10 @@ def file_to_data_structure(local_filename, sql_tree=None):
 
     file_data = []
     column_positions = {}
+    column_datatypes = {}
     data_filter_sql_tree = []
     data_filter_this_file = {}
+    header_filename = local_filename + '_header'
 
     if sql_tree is not None and 'filters' in sql_tree:
         data_filter_sql_tree = sql_tree['filters']
@@ -69,9 +77,33 @@ def file_to_data_structure(local_filename, sql_tree=None):
     lfile_reader = csv.reader(open(local_filename, newline=''),
                               delimiter=',', quotechar='"')
 
+    lfile_header_reader = csv.reader(open(header_filename, newline=''),
+                                     delimiter=',', quotechar='"')
+
     column_names = lfile_reader.__next__()
+    column_headers = lfile_header_reader.__next__()
+
     for i, v in enumerate(column_names):
         column_positions[v] = i
+
+    for i, v in enumerate(column_headers):
+        column_definition = v.split(' ')
+        column_name = column_definition[0]
+        column_datatype = column_definition[1]
+        if column_datatype.upper() == 'DATE':
+            column_datatypes[column_name] = 'DATE'
+
+        elif column_datatype.upper() == 'INTEGER':
+            column_datatypes[column_name] = 'NUMBER'
+
+        elif column_datatype.upper() == 'NUMERIC':
+            column_datatypes[column_name] = 'NUMBER'
+
+        elif 'CHAR' in column_datatype.upper():
+            column_datatypes[column_name] = 'CHAR'
+
+        else:
+            column_datatypes[column_name] = ''
 
     # check to see if filter column is in file and map filters to keys
     for i, filter in enumerate(data_filter_sql_tree):
@@ -348,10 +380,11 @@ if __name__ == '__main__':
             tcph.lineitem
         group by
             l_returnflag,
-            l_linestatus
-        order by
-            l_returnflag,
-            l_linestatus;"""
+            l_linestatus"""
+
+    #    """order by
+    #        l_returnflag,
+    #        l_linestatus;"""
 
     import sql_to_tree
 

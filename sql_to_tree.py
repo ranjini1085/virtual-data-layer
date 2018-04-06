@@ -70,14 +70,5 @@ if __name__ == '__main__':
         l_returnflag,
         l_linestatus;"""
 
-    input_sql = """select c_mktsegment
-             sum(c_acctbal),
-             avg(c_acctbal),
-             min(c_acctbal),
-             max(c_acctbal),
-             count(*)
-             from tcph.customer
-             group by c_mktsegment"""
-
     for k, v in sql_to_tree(input_sql).items():
         print(k, v)

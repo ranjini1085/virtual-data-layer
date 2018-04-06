@@ -15,18 +15,18 @@ def extract_orderby_part(parsed):
         returns:
             each "order by" portion of the query until no more remain
     '''
-    where_seen = False
+    order_seen = False
     order_by_seen = False
 
     for item in parsed.tokens:
         if item.value.upper() == 'HAVING':
             raise StopIteration
-        if order_by_seen is True and item.value.upper() != 'BY':
+        if order_by_seen is True:
             yield item
-        if where_seen is True and item.value.upper() == 'ORDER':
+        if item.value.upper() == 'ORDER':
+            order_seen = True
+        if order_seen is True and item.value.upper() == 'BY':
             order_by_seen = True
-        if isinstance(item, sqlparse.sql.Where):
-            where_seen = True
 
 
 def extract_orderby_identifiers(token_stream):
