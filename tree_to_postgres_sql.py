@@ -144,13 +144,25 @@ def tree_to_postgres_sql(sql_tree, sql_type):
         orderby_block = sql_tree['ordering']
 
         for i, ordering in enumerate(orderby_block):
+
+            # open function block, if any
+            if ordering['function'] is not None:
+                sql_command += ordering['function']
+                sql_command += '('
+
+            # add table names or aliases if present
             if ordering['table_or_alias_name'] is not None:
                 sql_command += ordering['table_or_alias_name']
                 sql_command += '.'
+
             # replace non-standard SQL parts with Postgres SQL parts
             sql_command += \
                 syntax_replace_posgres(ordering['column_name'],
                                        sql_type)
+
+            # close function block, if any
+            if ordering['function'] is not None:
+                sql_command += ')'
 
             if i < len(orderby_block) - 1:
                 sql_command += ', '
@@ -178,35 +190,28 @@ if __name__ == '__main__':
 
     import sql_to_tree
 
-    input_sql = """
+    tcph3_sql = """
         select
-            l_returnflag,
-            l_linestatus,
-            sum(l_quantity),
+            l_orderkey,
             sum(l_extendedprice),
-            avg(l_quantity),
-            avg(l_extendedprice),
-            avg(l_discount),
-            count(*)
+            o_orderdate,
+            o_shippriority
         from
-            lineitem
+            tcph.customer,
+            tcph.orders,
+            tcph.lineitem
         where
-            l_shipdate <= '1998-12-01'
+            c_mktsegment = 'BUILDING'
+            and c_custkey = o_custkey
+            and l_orderkey = o_orderkey
+            and o_orderdate < '1997-12-31'
+            and l_shipdate > '1998-01-01'
         group by
-            l_returnflag,
-            l_linestatus
-        order by
-            l_returnflag,
-            l_linestatus;"""
+            l_orderkey,
+            o_orderdate,
+            o_shippriority
+            order by
+            sum(l_extendedprice) desc,
+            o_orderdate;"""
 
-    print(tree_to_postgres_sql(sql_to_tree.sql_to_tree(input_sql), 'Oracle'))
-
-'''
-    input_sql = """select c.customer_name, order_date, sum(o.orders), sysdate
-                from tcph.customer as c, tcph.order o, tcph.part
-                where c.customer_id = o.customer_id
-                and o.part_number = tcph.part.part_number
-                and c.customer_id = 1
-                group by c.customer_name, o.order_date
-                order by c.customer_name;"""
-                '''
+    print(tree_to_postgres_sql(sql_to_tree.sql_to_tree(tcph3_sql), 'Oracle'))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sqlparse
-from sqlparse.sql import IdentifierList
+from sqlparse.sql import IdentifierList, Function
 from sqlparse.tokens import Whitespace, Newline, Punctuation
 
 
@@ -43,26 +43,46 @@ def extract_orderby_identifiers(token_stream):
     '''
 
     for item in token_stream:
+        identifier_list = []
+
+        # put identifiers into a list if the parser doesn't
         if isinstance(item, IdentifierList):
-            for identifier in item.get_identifiers():
-                if not (identifier.ttype is Whitespace or
-                        identifier.ttype is Newline
-                        or identifier.ttype is Punctuation):
-                            column_identifier = {}
+            identifier_list = item.get_identifiers()
+        else:
+            identifier_list.append(item)
+
+        for identifier in identifier_list:
+            column_identifier = {}
+
+            try:
+                # handle functions in order by
+                if isinstance(identifier, Function):
+                    column_identifier['function'] = identifier.get_real_name()
+                    if len(identifier.get_parameters()) > 0:
+                        for item in identifier.get_parameters():
+                            column_identifier['column_name'] =\
+                                item.get_real_name()
+                            column_identifier['table_or_alias_name'] =\
+                                item.get_parent_name()
+
+                    # handle functions with no column names, like count(*)
+                    else:
+                        column_identifier['column_name'] = None
+                        column_identifier['table_or_alias_name'] = None
+                    yield column_identifier
+
+                # handle columns in order by
+                elif not (identifier.ttype is Whitespace or
+                          identifier.ttype is Newline
+                          or identifier.ttype is Punctuation):
                             column_identifier['column_name'] =\
                                 identifier.get_real_name()
                             column_identifier['table_or_alias_name'] =\
                                 identifier.get_parent_name()
+                            column_identifier['function'] = None
                             yield column_identifier
-        else:
-            if not (item.ttype is Whitespace or item.ttype is Newline
-                    or item.ttype is Punctuation):
-                column_identifier = {}
-                column_identifier['column_name'] =\
-                    item.get_real_name()
-                column_identifier['table_or_alias_name'] =\
-                    item.get_parent_name()
-                yield column_identifier
+            except AttributeError as ae:
+                print("'" + identifier.value + "': " + str(ae))
 
 
 def extract_orderby(sql):
@@ -80,26 +100,27 @@ def extract_orderby(sql):
 if __name__ == '__main__':
 
     input_sql = """
-    select
-        l_returnflag,
-        l_linestatus,
-        sum(l_quantity) as sum_qty,
-        sum(l_extendedprice) as sum_base_price,
-        sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
-        sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
-        avg(l_quantity) as avg_qty,
-        avg(l_extendedprice) as avg_price,
-        avg(l_discount) as avg_disc,
-        count(*) as count_order
-    from
-        lineitem
-    where
-        l_shipdate <= date '1998-12-01' - interval '90' day (3)
-    group by
-        l_returnflag,
-        l_linestatus
-    order by
-        l_returnflag,
-        l_linestatus;"""
+        select
+            l_orderkey,
+            sum(l_extendedprice),
+            o_orderdate,
+            o_shippriority
+        from
+            tcph.customer,
+            tcph.orders,
+            tcph.lineitem
+        where
+            c_mktsegment = 'BUILDING'
+            and c_custkey = o_custkey
+            and l_orderkey = o_orderkey
+            and o_orderdate < '1997-12-31'
+            and l_shipdate > '1998-01-01'
+        group by
+            l_orderkey,
+            o_orderdate,
+            o_shippriority
+        order by
+            sum(l_extendedprice),
+            o_orderdate;"""
 
     print(extract_orderby(input_sql))

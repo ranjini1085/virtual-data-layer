@@ -18,6 +18,6 @@ group by
 	o_orderdate,
 	o_shippriority
 order by
-	sum(l_extendedprice) desc,
+	sum(l_extendedprice),
 	o_orderdate;
 
