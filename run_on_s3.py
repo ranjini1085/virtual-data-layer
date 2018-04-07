@@ -139,10 +139,15 @@ def file_to_data_structure(local_filename, sql_tree=None):
 
                     if column_datatypes[filter['identifier']] == 'NUMBER':
                         data_element = float(line_data[filter_position])
-                        filter_element = float(filter['value'].replace("'", ''))
+                        filter_element = \
+                            float(filter['value'].replace("'", ''))
                     elif column_datatypes[filter['identifier']] == 'DATE':
-                        data_element = datetime.strptime(line_data[filter_position], "%Y-%m-%d")
-                        filter_element = datetime.strptime(filter['value'].replace("'", ''), "%Y-%m-%d")
+                        data_element = \
+                            datetime.strptime(line_data[filter_position],
+                                              "%Y-%m-%d")
+                        filter_element = \
+                            datetime.strptime(filter['value'].replace("'", ''),
+                                              "%Y-%m-%d")
                     else:
                         data_element = line_data[filter_position]
                         filter_element = filter['value'].replace("'", '')
@@ -388,16 +393,28 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
         # build a lambda function for the sort
         order_fields_func = 'lambda i: ('
         for i, order_item in enumerate(sql_tree['ordering']):
-            order_column_name = order_item['column_name']
+
+            # handle function vs. column
+            if order_item['function'] is None:
+                order_column_name = order_item['column_name']
+            else:
+                order_column_name = order_item['function'] + '_' + \
+                                    order_item['column_name']
+
             if order_column_name in selection_headers:
 
                 # if type is number, convert to float in lambda function
-                if selected_columns_datatypes[order_column_name] == 'NUMBER':
+                # use the original column name when looking up the datatype,
+                # but use the derived column name when building the header,
+                # as it's important to use the aggregate name in output
+                if selected_columns_datatypes[order_item['column_name']] \
+                        == 'NUMBER':
                     sort_item = 'float(i[' + \
                      str(selection_headers.index(order_column_name)) + ']),'
 
                 # if type is date, convert to datetime in lambda function
-                elif selected_columns_datatypes[order_column_name] == 'DATE':
+                elif selected_columns_datatypes[order_item['column_name']] \
+                        == 'DATE':
                     sort_item = 'datetime.strptime(i[' + \
                      str(selection_headers.index(order_column_name)) + \
                      '], "%Y-%m-%d"),'
@@ -426,37 +443,17 @@ if __name__ == '__main__':
 
     bucket = 'virtual-data-layer'
     input_sql = """
-        select
-            l_returnflag,
-            l_linestatus,
-            l_tax,
-            sum(l_quantity),
-            sum(l_extendedprice),
-            avg(l_quantity),
-            avg(l_extendedprice),
-            avg(l_discount),
-            count(*)
-        from
-            tcph.lineitem
-        where
-            l_shipdate <= '1998-12-01'
-        group by
-            l_returnflag,
-            l_linestatus,
-            l_tax
-        order by
-            l_returnflag,
-            l_linestatus;"""
-
-    #    """order by
-    #        l_returnflag,
-    #        l_linestatus;"""
-
-    #            sum(l_quantity),
-    #            sum(l_extendedprice),
-    #            avg(l_quantity),
-    #            avg(l_extendedprice),
-    #            avg(l_discount),
+                select
+                l_orderkey,
+                sum(l_extendedprice)
+            from
+                tcph.lineitem
+            where
+                l_shipdate > '1998-01-01'
+            group by
+                l_orderkey
+            order by
+                l_orderkey;"""
 
     import sql_to_tree
 
