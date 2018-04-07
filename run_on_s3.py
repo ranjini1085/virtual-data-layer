@@ -84,12 +84,12 @@ def execute_sqltree_on_s3(bucket, sql_tree):
 
     # map selected columns to tables
     for k in query_data_column_positions:
-            mapped_columns, mapped_headers = \
+            mapped_select_columns, mapped_headers, mapped_join_columns = \
                 map_select_columns_to_data(sql_tree, k,
                                            query_data_column_positions[k],
                                            query_data_headers[k])
 
-            selected_columns.append(mapped_columns)
+            selected_columns.append(mapped_select_columns)
             selected_columns_datatypes.append(mapped_headers)
 
     # merge list of selected columns datatypes into one dictionary
@@ -107,6 +107,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
                 selected_data[k].append(row[selected_column_position])
 
     # apply joins
+    print(sql_tree['joins'])
 
     # get length of resulting dataset
     for k in selected_data.keys():
@@ -293,7 +294,6 @@ if __name__ == '__main__':
             where
                 c_mktsegment = 'BUILDING'
                 and c_custkey = o_custkey
-                and l_orderkey = o_orderkey
                 and o_orderdate < '1997-12-31'"""
 
     import sql_to_tree

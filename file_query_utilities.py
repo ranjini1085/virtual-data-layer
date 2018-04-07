@@ -149,8 +149,27 @@ def map_select_columns_to_data(sql_tree, table_name,
                                 in the S3 file
             column_datatypes - dictionary of column names and their datatypes
 
+        returns:
+            selected_column - a dictionary of columns mapped to input files,
+                              corresponding with the columns selected by
+                              this query
+                              key is column name
+                              value is a tuple of filename and column position
+
+            selected_column_datatype - a dictionary of columns and
+                                       their datatypes
+                                       key is column name
+                                       value is datatype
+
+            join_column - a dictionary of columns mapped to input files,
+                              corresponding with the columns involved in
+                              this query's joins
+                              key is column name
+                              value is a tuple of filename and column position
+
 '''
     selected_column = {}
+    join_column = {}
     selected_column_datatype = {}
     select_identifiers = sql_tree['select']
     select_identifiers.extend(sql_tree['select aggregate'])
@@ -164,7 +183,7 @@ def map_select_columns_to_data(sql_tree, table_name,
             selected_column_datatype[column_name] = \
                 column_datatypes[column_name]
 
-    return selected_column, selected_column_datatype
+    return selected_column, selected_column_datatype, join_column
 
 
 def transpose_columns_to_rows(selected_data_in_columns):
