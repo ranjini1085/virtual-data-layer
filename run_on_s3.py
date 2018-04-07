@@ -382,13 +382,19 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
         for i, order_item in enumerate(sql_tree['ordering']):
             order_column_name = order_item['column_name']
             if order_column_name in selection_headers:
+
+                # if type is number, convert to float in lambda function
                 if selected_columns_datatypes[order_column_name] == 'NUMBER':
                     sort_item = 'float(i[' + \
                      str(selection_headers.index(order_column_name)) + ']),'
+
+                # if type is date, convert to datetime in lambda function
                 elif selected_columns_datatypes[order_column_name] == 'DATE':
                     sort_item = 'datetime.strptime(i[' + \
                      str(selection_headers.index(order_column_name)) + \
                      '], "%Y-%m-%d")'
+
+                # else treat as a string
                 else:
                     sort_item = 'i[' + \
                         str(selection_headers.index(order_column_name)) + ']'
