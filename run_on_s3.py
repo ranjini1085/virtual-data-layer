@@ -382,10 +382,19 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
         for i, order_item in enumerate(sql_tree['ordering']):
             order_column_name = order_item['column_name']
             if order_column_name in selection_headers:
+                if selected_columns_datatypes[order_column_name] == 'NUMBER':
                     sort_item = 'float(i[' + \
-                        str(selection_headers.index(order_column_name)) + \
-                        ']),'
-                    order_fields_func += sort_item
+                     str(selection_headers.index(order_column_name)) + ']),'
+                elif selected_columns_datatypes[order_column_name] == 'DATE':
+                    sort_item = 'datetime.strptime(i[' + \
+                     str(selection_headers.index(order_column_name)) + \
+                     '], "%Y-%m-%d")'
+                else:
+                    sort_item = 'i[' + \
+                        str(selection_headers.index(order_column_name)) + ']'
+
+                order_fields_func += sort_item
+
         order_fields_func = order_fields_func.rstrip(',')
         order_fields_func += ')'
         order_fields_func = eval(order_fields_func)
@@ -406,12 +415,10 @@ if __name__ == '__main__':
         select
             l_returnflag,
             l_linestatus,
-            min(l_commitdate)
+            l_commitdate
         from
             tcph.lineitem
-        group by
-            l_returnflag,
-            l_linestatus"""
+        order by l_commitdate"""
 
     #    """order by
     #        l_returnflag,
