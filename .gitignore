@@ -19,3 +19,7 @@ tcph_lineitem
 lineitem_header.txt
 tcph_lineitem_header
 lineitem
+*.txt
+tcph_customer_header
+tcph_orders
+tcph_orders_header
