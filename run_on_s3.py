@@ -89,6 +89,7 @@ def file_to_data_structure(local_filename, sql_tree=None):
     for i, v in enumerate(column_names):
         column_positions[v] = i
 
+    # set simplified datatype for each column
     for i, v in enumerate(column_headers):
         column_definition = v.split(' ')
         column_name = column_definition[0]
@@ -119,6 +120,7 @@ def file_to_data_structure(local_filename, sql_tree=None):
             if filter_position not in data_filter_this_file:
                 data_filter_this_file[filter_position] = []
             filter_values = {}
+            filter_values['identifier'] = filter_identifier
             filter_values['operator'] = filter_operator
             filter_values['value'] = filter_value
             data_filter_this_file[filter_position].append(filter_values)
@@ -134,34 +136,39 @@ def file_to_data_structure(local_filename, sql_tree=None):
             for filter_position, filter_list in \
                     data_filter_this_file.items():
                 for i, filter in enumerate(filter_list):
+
+                    if column_datatypes[filter['identifier']] == 'NUMBER':
+                        data_element = float(line_data[filter_position])
+                        filter_element = float(filter['value'].replace("'", ''))
+                    elif column_datatypes[filter['identifier']] == 'DATE':
+                        data_element = datetime.strptime(line_data[filter_position], "%Y-%m-%d")
+                        filter_element = datetime.strptime(filter['value'].replace("'", ''), "%Y-%m-%d")
+                    else:
+                        data_element = line_data[filter_position]
+                        filter_element = filter['value'].replace("'", '')
+
                     if filter['operator'] == '=' \
-                            and line_data[filter_position] == \
-                            filter['value'].replace("'", ''):
+                            and data_element == filter_element:
                         file_data.append(line_data)
 
                     elif filter['operator'] == '!=' \
-                            and line_data[filter_position] != \
-                            filter['value'].replace("'", ''):
+                            and data_element != filter_element:
                         file_data.append(line_data)
 
                     elif filter['operator'] == '>' \
-                            and float(line_data[filter_position]) > \
-                            float(filter['value'].replace("'", '')):
+                            and data_element > filter_element:
                         file_data.append(line_data)
 
                     elif filter['operator'] == '>=' \
-                            and float(line_data[filter_position]) >= \
-                            float(filter['value'].replace("'", '')):
+                            and data_element >= filter_element:
                         file_data.append(line_data)
 
                     elif filter['operator'] == '<' \
-                            and float(line_data[filter_position]) < \
-                            float(filter['value'].replace("'", '')):
+                            and data_element < filter_element:
                         file_data.append(line_data)
 
                     elif filter['operator'] == '<=' \
-                            and float(line_data[filter_position]) <= \
-                            float(filter['value'].replace("'", '')):
+                            and data_element <= filter_element:
                         file_data.append(line_data)
 
     return column_positions, column_datatypes, file_data
@@ -392,12 +399,12 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
                 elif selected_columns_datatypes[order_column_name] == 'DATE':
                     sort_item = 'datetime.strptime(i[' + \
                      str(selection_headers.index(order_column_name)) + \
-                     '], "%Y-%m-%d")'
+                     '], "%Y-%m-%d"),'
 
                 # else treat as a string
                 else:
                     sort_item = 'i[' + \
-                        str(selection_headers.index(order_column_name)) + ']'
+                        str(selection_headers.index(order_column_name)) + '],'
 
                 order_fields_func += sort_item
 
@@ -421,10 +428,22 @@ if __name__ == '__main__':
         select
             l_returnflag,
             l_linestatus,
-            l_commitdate
+            sum(l_quantity),
+            sum(l_extendedprice),
+            avg(l_quantity),
+            avg(l_extendedprice),
+            avg(l_discount),
+            count(*)
         from
             tcph.lineitem
-        order by l_commitdate"""
+        where
+            l_shipdate <= '1998-12-01'
+        group by
+            l_returnflag,
+            l_linestatus
+        order by
+            l_returnflag,
+            l_linestatus;"""
 
     #    """order by
     #        l_returnflag,
