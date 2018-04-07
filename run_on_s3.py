@@ -2,6 +2,7 @@
 import boto3
 import csv
 from botocore.exceptions import EndpointConnectionError
+from datetime import datetime
 
 
 def retrieve_s3_file(bucket, filename, folder=None):
@@ -60,6 +61,8 @@ def file_to_data_structure(local_filename, sql_tree=None):
     returns:
         column positions: a dictionary with a mapping between column names
                         and column_positions
+        column headers: a dictionary with a mapping between column column_names
+                        and column datatypes
         file_data: a list of rows from the local file, with each row
                         represented as a list
 '''
@@ -103,7 +106,7 @@ def file_to_data_structure(local_filename, sql_tree=None):
             column_datatypes[column_name] = 'CHAR'
 
         else:
-            column_datatypes[column_name] = ''
+            column_datatypes[column_name] = column_datatype.upper()
 
     # check to see if filter column is in file and map filters to keys
     for i, filter in enumerate(data_filter_sql_tree):
@@ -161,14 +164,16 @@ def file_to_data_structure(local_filename, sql_tree=None):
                             float(filter['value'].replace("'", '')):
                         file_data.append(line_data)
 
-    return column_positions, file_data
+    return column_positions, column_datatypes, file_data
 
 
-def map_select_columns_to_data(sql_tree, table_name, column_positions):
+def map_select_columns_to_data(sql_tree, table_name,
+                               column_positions, column_headers):
     '''
 
 '''
     selected_column = {}
+    selected_column_datatype = {}
     select_identifiers = sql_tree['select']
     select_identifiers.extend(sql_tree['select aggregate'])
 
@@ -178,7 +183,9 @@ def map_select_columns_to_data(sql_tree, table_name, column_positions):
         if column_name in column_positions.keys():
             selected_column[column_name] = \
                 (table_name, column_positions[column_name])
-    return selected_column
+            selected_column_datatype[column_name] = column_headers[column_name]
+
+    return selected_column, selected_column_datatype
 
 
 def transpose_columns_to_rows(selected_data_in_columns):
@@ -201,7 +208,9 @@ def transpose_columns_to_rows(selected_data_in_columns):
 def exectute_sqltree_on_s3(bucket, sql_tree):
     query_data = {}
     query_data_column_positions = {}
+    query_data_headers = {}
     selected_columns = []
+    selected_columns_datatypes = []
     selected_data = {}
     post_join_row_count = 0
 
@@ -215,16 +224,25 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
         else:
             alias = table_definition['name']
 
-        query_data_column_positions[alias], query_data[alias] = \
+        query_data_column_positions[alias], query_data_headers[alias], \
+            query_data[alias] = \
             file_to_data_structure(retrieve_s3_file(bucket,
                                                     s3_filename, s3_folder),
                                    sql_tree)
 
     # map selected columns to tables
     for k in query_data_column_positions:
-        selected_columns.append(
+            mapped_columns, mapped_headers = \
                 map_select_columns_to_data(sql_tree, k,
-                                           query_data_column_positions[k]))
+                                           query_data_column_positions[k],
+                                           query_data_headers[k])
+
+            selected_columns.append(mapped_columns)
+            selected_columns_datatypes.append(mapped_headers)
+
+    # merge list of selected columns datatypes into one dictionary
+    selected_columns_datatypes = {k: v for d in selected_columns_datatypes
+                                  for k, v in d.items()}
 
     # select columns from specified dataset
     for i, column in enumerate(selected_columns):
@@ -301,26 +319,44 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
                             group_list.append(
                                 selected_data[aggregate['column_name']][row])
 
-                        if aggregate['function'] == 'count':
-                            aggregated_data[aggregate_name].append(
-                                str(len(set(group_list))))
+                        # build functions to deal with type conversions for
+                        # numbers and dates
+                        aggregate_func = ''
+                        if selected_columns_datatypes[
+                                aggregate['column_name']] == 'NUMBER':
+                            aggregate_func = \
+                                eval('[float(i) for i in group_list]')
+                        elif selected_columns_datatypes[
+                                aggregate['column_name']] == 'DATE':
+                            aggregate_func = \
+                                eval('[datetime.strptime(i, "%Y-%m-%d") for i in group_list]')
+                        else:
+                            aggregate_func = eval('group_list')
+                        try:
+                            if aggregate['function'] == 'count':
+                                aggregated_data[aggregate_name].append(
+                                    str(len(set(group_list))))
 
-                        elif aggregate['function'] == 'sum':
-                            aggregated_data[aggregate_name].append(
-                                str(sum([float(i) for i in group_list])))
+                            elif aggregate['function'] == 'sum':
+                                aggregated_data[aggregate_name].append(
+                                    str(sum(aggregate_func)))
 
-                        elif aggregate['function'] == 'max':
-                            aggregated_data[aggregate_name].append(
-                                str(max([float(i) for i in group_list])))
+                            elif aggregate['function'] == 'max':
+                                aggregated_data[aggregate_name].append(
+                                    str(max(aggregate_func)))
+                                print(type(aggregate_func))
 
-                        elif aggregate['function'] == 'min':
-                            aggregated_data[aggregate_name].append(
-                                str(min([float(i) for i in group_list])))
+                            elif aggregate['function'] == 'min':
+                                aggregated_data[aggregate_name].append(
+                                    str(min(aggregate_func)))
 
-                        elif aggregate['function'] == 'avg':
-                            aggregated_data[aggregate_name].append(
-                                str(sum([float(i) for i in group_list])
-                                    / len(group_list)))
+                            elif aggregate['function'] == 'avg':
+                                aggregated_data[aggregate_name].append(
+                                    str(sum(aggregate_func)
+                                        / len(group_list)))
+                        except TypeError as te:
+                            print('SQL Error: ' + str(te))
+                            return 'SQL Error'
 
                     elif aggregate['column_name'] is None and \
                             aggregate['function'] == 'count':
@@ -370,12 +406,7 @@ if __name__ == '__main__':
         select
             l_returnflag,
             l_linestatus,
-            sum(l_quantity),
-            sum(l_extendedprice),
-            avg(l_quantity),
-            avg(l_extendedprice),
-            avg(l_discount),
-            count(*)
+            min(l_commitdate)
         from
             tcph.lineitem
         group by
@@ -385,6 +416,12 @@ if __name__ == '__main__':
     #    """order by
     #        l_returnflag,
     #        l_linestatus;"""
+
+    #            sum(l_quantity),
+    #            sum(l_extendedprice),
+    #            avg(l_quantity),
+    #            avg(l_extendedprice),
+    #            avg(l_discount),
 
     import sql_to_tree
 

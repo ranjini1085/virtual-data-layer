@@ -16,3 +16,5 @@ tcph_customer
 cmdout.txt
 *.csv
 tcph_lineitem
+lineitem_header.txt
+tcph_lineitem_header
