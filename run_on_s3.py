@@ -336,7 +336,8 @@ def exectute_sqltree_on_s3(bucket, sql_tree):
                         elif selected_columns_datatypes[
                                 aggregate['column_name']] == 'DATE':
                             aggregate_func = \
-                                eval('[datetime.strptime(i, "%Y-%m-%d") for i in group_list]')
+                                eval('[datetime.strptime(i, "%Y-%m-%d") ' +
+                                     'for i in group_list]')
                         else:
                             aggregate_func = eval('group_list')
                         try:
@@ -428,6 +429,7 @@ if __name__ == '__main__':
         select
             l_returnflag,
             l_linestatus,
+            l_tax,
             sum(l_quantity),
             sum(l_extendedprice),
             avg(l_quantity),
@@ -440,7 +442,8 @@ if __name__ == '__main__':
             l_shipdate <= '1998-12-01'
         group by
             l_returnflag,
-            l_linestatus
+            l_linestatus,
+            l_tax
         order by
             l_returnflag,
             l_linestatus;"""
