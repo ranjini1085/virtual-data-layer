@@ -5,7 +5,8 @@ from file_query_utilities import file_to_data_structure,\
                            map_select_columns_to_data,\
                            transpose_columns_to_rows,\
                            column_intersection,\
-                           optimize_intersection_order
+                           optimize_intersection_order,\
+                           join_data
 
 
 def retrieve_s3_file(bucket, filename, folder=None):
@@ -107,48 +108,23 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     # this could be further optimized
 
     join_plan = optimize_intersection_order(sql_tree, join_columns)
-
-    # apply joins
-
-    interim_data = {}
     selected_and_join_columns = {**selected_columns, **join_columns}
 
+    # apply join plan
+
+    interim_data = {}
+
+    for k, column in selected_and_join_columns.items():
+        interim_data[k] = []
+        select_table = column[0]
+        selected_column_position = column[1]
+
+        for row in query_data[select_table]:
+            interim_data[k].append(row[selected_column_position])
+
+    # iteratively join all tables
     for i, join in enumerate(join_plan):
-        left_table = join_columns[join['left_identifier']][0]
-        left_position = join_columns[join['left_identifier']][1]
-        right_table = join_columns[join['right_identifier']][0]
-        right_position = join_columns[join['right_identifier']][1]
-
-        left_column = []
-        right_column = []
-
-        for row in query_data[left_table]:
-            left_column.append(row[left_position])
-
-        for row in query_data[right_table]:
-            right_column.append(row[right_position])
-
-        # intersection_name = left_table + ',' + right_table
-        table_intersections = \
-            column_intersection(left_column, right_column)
-
-        for k, column in selected_and_join_columns.items():
-            interim_data[k] = []
-            select_table = column[0]
-            selected_column_position = column[1]
-
-            for left_row, right_rows in table_intersections.items():
-                for i, right_row in enumerate(right_rows):
-                    if select_table == left_table:
-                        interim_data[k].append(
-                                        query_data[select_table]
-                                                  [left_row]
-                                                  [selected_column_position])
-                    elif select_table == right_table:
-                        interim_data[k].append(
-                                        query_data[select_table]
-                                                  [right_row]
-                                                  [selected_column_position])
+        interim_data = join_data(join, interim_data, selected_and_join_columns)
 
     # select columns from specified dataset
     for k, column in selected_columns.items():

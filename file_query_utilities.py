@@ -319,6 +319,50 @@ def optimize_intersection_order(sql_tree, join_columns):
     return ordered_join_list
 
 
+def join_data(join, dataset, column_map):
+    '''
+
+'''
+
+    result_data = {}
+
+    left_table = column_map[join['left_identifier']][0]
+    #left_position = column_map[join['left_identifier']][1]
+    right_table = column_map[join['right_identifier']][0]
+    #right_position = column_map[join['right_identifier']][1]
+
+    left_column = dataset[join['left_identifier']]
+    right_column = dataset[join['right_identifier']]
+
+    #for row in dataset[left_table]:
+    #    left_column.append(row[left_position])
+
+    #for row in dataset[right_table]:
+    #    right_column.append(row[right_position])
+
+    # intersection_name = left_table + ',' + right_table
+    table_intersections = \
+        column_intersection(left_column, right_column)
+
+    for k, column in column_map.items():
+        result_data[k] = []
+        select_table = column[0]
+        # selected_column_position = column[1]
+
+        for left_row, right_rows in table_intersections.items():
+            for i, right_row in enumerate(right_rows):
+                if select_table == left_table:
+                    result_data[k].append(
+                                    dataset[k]
+                                           [left_row])
+                elif select_table == right_table:
+                    result_data[k].append(
+                                    dataset[k]
+                                           [right_row])
+
+    return result_data
+
+
 if __name__ == '__main__':
     # unit tests
     left_column = [1, 1, 3, 4, 2]
