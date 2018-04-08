@@ -1,12 +1,12 @@
 #!/usr/bin/python
 import boto3
 from botocore.exceptions import EndpointConnectionError
+from datetime import datetime
 from file_query_utilities import file_to_data_structure,\
                            map_select_columns_to_data,\
                            transpose_columns_to_rows,\
-                           column_intersection,\
                            optimize_intersection_order,\
-                           join_data
+                           intersect_data
 
 
 def retrieve_s3_file(bucket, filename, folder=None):
@@ -68,7 +68,6 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     join_columns = {}
     selected_columns_datatypes = {}
     selected_data = {}
-    table_intersections = {}
     post_join_row_count = 0
 
     # download files in query and map to data structures
@@ -122,9 +121,14 @@ def execute_sqltree_on_s3(bucket, sql_tree):
         for row in query_data[select_table]:
             interim_data[k].append(row[selected_column_position])
 
+    previously_joined_tables = set()
     # iteratively join all tables
     for i, join in enumerate(join_plan):
-        interim_data = join_data(join, interim_data, selected_and_join_columns)
+        interim_data = intersect_data(join,
+                                      interim_data,
+                                      selected_and_join_columns,
+                                      previously_joined_tables)
+        previously_joined_tables.update(join['join_tables'])
 
     # select columns from specified dataset
     for k, column in selected_columns.items():
@@ -277,7 +281,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
                         == 'DATE':
                     sort_item = 'datetime.strptime(i[' + \
                      str(selection_headers.index(order_column_name)) + \
-                     '], "%Y-%m-%d"),'
+                     '].lstrip(" ").strip("\'"), "%Y-%m-%d"),'
 
                 # else treat as a string
                 else:
@@ -309,25 +313,34 @@ if __name__ == '__main__':
                     o_shippriority
             from
                 tcph.customer,
-                tcph.orders
-            where
-                c_custkey = o_custkey
-                and o_orderdate < '1997-12-31'"""
-
-    tcph3_sql = """
-                select
-                    c_custkey,
-                    o_orderdate,
-                    o_shippriority
-            from
-                tcph.customer,
                 tcph.orders,
                 tcph.lineitem
             where
-                c_mktsegment = 'BUILDING'
-                and c_custkey = o_custkey
-                and l_orderkey = o_orderkey
-                and o_orderdate < '1997-12-31'"""
+                c_custkey = o_custkey
+                and o_orderkey = l_orderkey
+                and c_custkey = '1'"""
+
+    tcph3_sql = """
+        select
+            l_orderkey,
+            sum(l_extendedprice),
+            o_orderdate,
+            o_shippriority
+        from
+            tcph.customer,
+            tcph.orders,
+            tcph.lineitem
+        where
+            c_mktsegment = 'BUILDING'
+            and c_custkey = o_custkey
+            and o_orderkey = l_orderkey
+            and o_orderdate < '1997-12-31'
+        group by
+            l_orderkey,
+            o_orderdate,
+            o_shippriority
+            order by
+            o_orderdate;"""
 
     tcph1_sql = """
     select
@@ -353,7 +366,7 @@ if __name__ == '__main__':
         l_linestatus;"""
     import sql_to_tree
 
-    sql_tree = sql_to_tree.sql_to_tree(test_sql)
+    sql_tree = sql_to_tree.sql_to_tree(tcph3_sql)
     # for k, v in sql_tree.items():
     #    print(str(k) + ": " + str(v))
     result = execute_sqltree_on_s3(bucket, sql_tree)

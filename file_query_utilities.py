@@ -319,46 +319,46 @@ def optimize_intersection_order(sql_tree, join_columns):
     return ordered_join_list
 
 
-def join_data(join, dataset, column_map):
-    '''
+def intersect_data(intersect, dataset, column_map, previously_joined_tables):
+    '''executes an intersection on a columnar dataset
+
+    keyword_args:
+        join: a single list element from the optimize_intersection_order func
+        dataset: a columnar dataset, expressed as a dictionary with
+                 the keys as columns and values as lists of row filter_values
+        column_map: a list of columns mapped to tables
+
+    returns:
+        result_data: a columnar dataset with this particular intersect applied
 
 '''
 
     result_data = {}
 
-    left_table = column_map[join['left_identifier']][0]
-    #left_position = column_map[join['left_identifier']][1]
-    right_table = column_map[join['right_identifier']][0]
-    #right_position = column_map[join['right_identifier']][1]
+    left_table = column_map[intersect['left_identifier']][0]
+    right_table = column_map[intersect['right_identifier']][0]
 
-    left_column = dataset[join['left_identifier']]
-    right_column = dataset[join['right_identifier']]
+    left_column = dataset[intersect['left_identifier']]
+    right_column = dataset[intersect['right_identifier']]
 
-    #for row in dataset[left_table]:
-    #    left_column.append(row[left_position])
-
-    #for row in dataset[right_table]:
-    #    right_column.append(row[right_position])
-
-    # intersection_name = left_table + ',' + right_table
     table_intersections = \
         column_intersection(left_column, right_column)
 
     for k, column in column_map.items():
         result_data[k] = []
         select_table = column[0]
-        # selected_column_position = column[1]
 
-        for left_row, right_rows in table_intersections.items():
-            for i, right_row in enumerate(right_rows):
-                if select_table == left_table:
-                    result_data[k].append(
-                                    dataset[k]
-                                           [left_row])
-                elif select_table == right_table:
-                    result_data[k].append(
-                                    dataset[k]
-                                           [right_row])
+        if select_table in [left_table, right_table] \
+                or select_table in previously_joined_tables:
+            for left_row, right_rows in table_intersections.items():
+                for i, right_row in enumerate(right_rows):
+                    if select_table == left_table \
+                            or select_table in previously_joined_tables:
+                        result_data[k].append(dataset[k][left_row])
+                    elif select_table == right_table:
+                        result_data[k].append(dataset[k][right_row])
+        else:
+            result_data[k] = dataset[k]
 
     return result_data
 
