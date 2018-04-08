@@ -107,12 +107,11 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     # this could be further optimized
 
     join_plan = optimize_intersection_order(sql_tree, join_columns)
-    print(selected_columns)
 
     # apply joins
 
     interim_data = {}
-    selected_and_join_columns = {}
+    selected_and_join_columns = {**selected_columns, **join_columns}
 
     for i, join in enumerate(join_plan):
         left_table = join_columns[join['left_identifier']][0]
@@ -129,23 +128,31 @@ def execute_sqltree_on_s3(bucket, sql_tree):
         for row in query_data[right_table]:
             right_column.append(row[right_position])
 
-        intersection_name = left_table + ',' + right_table
-        table_intersections[intersection_name] = \
+        # intersection_name = left_table + ',' + right_table
+        table_intersections = \
             column_intersection(left_column, right_column)
 
-    #print(table_intersections)
+        for k, column in selected_and_join_columns.items():
+            interim_data[k] = []
+            select_table = column[0]
+            selected_column_position = column[1]
 
-    selected_and_join_columns = {**selected_columns, **join_columns}
-    #print(selected_and_join_columns)
+            for left_row, right_rows in table_intersections.items():
+                for i, right_row in enumerate(right_rows):
+                    if select_table == left_table:
+                        interim_data[k].append(
+                                        query_data[select_table]
+                                                  [left_row]
+                                                  [selected_column_position])
+                    elif select_table == right_table:
+                        interim_data[k].append(
+                                        query_data[select_table]
+                                                  [right_row]
+                                                  [selected_column_position])
 
     # select columns from specified dataset
     for k, column in selected_columns.items():
-        selected_data[k] = []
-        select_table = column[0]
-        selected_column_position = column[1]
-
-        for row in query_data[select_table]:
-            selected_data[k].append(row[selected_column_position])
+        selected_data[k] = interim_data[k]
 
     # get length of resulting dataset
     for k in selected_data.keys():
@@ -261,7 +268,6 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     # add support for ordering asc or desc
     # add support for column definitions so we can determine how to sort
     # assumes sorting on numbers for now
-
     selection_headers, selected_rows = transpose_columns_to_rows(selected_data)
     ordered_data = [selection_headers]
 
@@ -320,6 +326,18 @@ def execute_sqltree_on_s3(bucket, sql_tree):
 if __name__ == '__main__':
 
     bucket = 'virtual-data-layer'
+    test_sql = """
+                select
+                    c_custkey,
+                    o_orderdate,
+                    o_shippriority
+            from
+                tcph.customer,
+                tcph.orders
+            where
+                c_custkey = o_custkey
+                and o_orderdate < '1997-12-31'"""
+
     tcph3_sql = """
                 select
                     c_custkey,
@@ -359,8 +377,8 @@ if __name__ == '__main__':
         l_linestatus;"""
     import sql_to_tree
 
-    sql_tree = sql_to_tree.sql_to_tree(tcph3_sql)
+    sql_tree = sql_to_tree.sql_to_tree(test_sql)
     # for k, v in sql_tree.items():
     #    print(str(k) + ": " + str(v))
     result = execute_sqltree_on_s3(bucket, sql_tree)
-    # print(result)
+    print(result)
