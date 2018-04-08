@@ -92,10 +92,15 @@ def extract_join_identifiers(token_stream):
     '''
 
     for item in token_stream:
+        join_identifier = {}
         if isinstance(item, Comparison):
             if isinstance(item.left, Identifier) \
                     and isinstance(item.right, Identifier):
-                yield(item.value)
+                join_identifier['left_identifier'] = item.left.value
+                join_identifier['right_identifier'] = item.right.value
+                join_identifier['join_type'] = ''
+
+                yield(join_identifier)
 
 
 def extract_where_subquery_identifiers(token_stream):
@@ -154,28 +159,28 @@ def extract_where_subqueries(sql):
 
 if __name__ == '__main__':
     input_sql = """
-    select
-        l_returnflag,
-        l_linestatus,
-        sum(l_quantity) as sum_qty,
-        sum(l_extendedprice) as sum_base_price,
-        sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,
-        sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
-        avg(l_quantity) as avg_qty,
-        avg(l_extendedprice) as avg_price,
-        avg(l_discount) as avg_disc,
-        count(*) as count_order
-    from
-        lineitem
-    where
-        l_shipdate <= '1998-12-01' and
-        l_quantity > '1'
-    group by
-        l_returnflag,
-        l_linestatus
-    order by
-        l_returnflag,
-        l_linestatus;"""
+        select
+            l_orderkey,
+            sum(l_extendedprice),
+            o_orderdate,
+            o_shippriority
+        from
+            tcph.customer,
+            tcph.orders,
+            tcph.lineitem
+        where
+            c_mktsegment = 'BUILDING'
+            and c_custkey = o_custkey
+            and l_orderkey = o_orderkey
+            and o_orderdate < '1997-12-31'
+            and l_shipdate > '1998-01-01'
+        group by
+            l_orderkey,
+            o_orderdate,
+            o_shippriority
+            order by
+            sum(l_extendedprice),
+            o_orderdate;"""
 
     print('joins: '+str(extract_joins(input_sql)))
     print('filters: '+str(extract_filters(input_sql)))

@@ -102,7 +102,14 @@ def tree_to_postgres_sql(sql_tree, sql_type):
        len(sql_tree['filters']) > 0:
         sql_command += ' where '
 
-        where_block = sql_tree['joins']
+        # start the where block with an empty list, and then add elements
+        where_block = []
+
+        for i, v in enumerate(sql_tree['joins']):
+            join = []
+            join.append(v['left_identifier'] + ' = ' + v['right_identifier'])
+            where_block.extend(join)
+
         # where_block.extend(sql_tree['where_subqueries'])
 
         for i, v in enumerate(sql_tree['filters']):
@@ -211,7 +218,7 @@ if __name__ == '__main__':
             o_orderdate,
             o_shippriority
             order by
-            sum(l_extendedprice) desc,
+            sum(l_extendedprice),
             o_orderdate;"""
 
     print(tree_to_postgres_sql(sql_to_tree.sql_to_tree(tcph3_sql), 'Oracle'))
