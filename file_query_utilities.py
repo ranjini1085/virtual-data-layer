@@ -335,11 +335,22 @@ def intersect_data(intersect, dataset, column_map, previously_joined_tables):
 
     result_data = {}
 
-    left_table = column_map[intersect['left_identifier']][0]
-    right_table = column_map[intersect['right_identifier']][0]
+    # optimize slightly by joining smaller table (left) to larger table (right)
+    if len(dataset[intersect['left_identifier']]) < \
+            len(dataset[intersect['right_identifier']]):
 
-    left_column = dataset[intersect['left_identifier']]
-    right_column = dataset[intersect['right_identifier']]
+        left_table = column_map[intersect['left_identifier']][0]
+        right_table = column_map[intersect['right_identifier']][0]
+
+        left_column = dataset[intersect['left_identifier']]
+        right_column = dataset[intersect['right_identifier']]
+
+    else:
+        left_table = column_map[intersect['right_identifier']][0]
+        right_table = column_map[intersect['left_identifier']][0]
+
+        left_column = dataset[intersect['right_identifier']]
+        right_column = dataset[intersect['left_identifier']]
 
     table_intersections = \
         column_intersection(left_column, right_column)

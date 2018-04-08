@@ -333,7 +333,7 @@ if __name__ == '__main__':
         where
             c_mktsegment = 'BUILDING'
             and c_custkey = o_custkey
-            and o_orderkey = l_orderkey
+            and l_orderkey = o_orderkey
             and o_orderdate < '1997-12-31'
         group by
             l_orderkey,
