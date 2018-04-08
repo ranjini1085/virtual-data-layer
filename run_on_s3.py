@@ -62,6 +62,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     query_data_column_positions = {}
     query_data_headers = {}
     selected_columns = []
+    join_columns = []
     selected_columns_datatypes = []
     selected_data = {}
     post_join_row_count = 0
@@ -79,9 +80,10 @@ def execute_sqltree_on_s3(bucket, sql_tree):
         query_data_column_positions[alias], query_data_headers[alias], \
             query_data[alias] = \
             file_to_data_structure(retrieve_s3_file(bucket,
-                                                    s3_filename, s3_folder),
+                                                    s3_filename,
+                                                    s3_folder),
                                    sql_tree)
-
+    # print(query_data_column_positions)
     # map selected columns to tables
     for k in query_data_column_positions:
             mapped_select_columns, mapped_headers, mapped_join_columns = \
@@ -90,8 +92,10 @@ def execute_sqltree_on_s3(bucket, sql_tree):
                                            query_data_headers[k])
 
             selected_columns.append(mapped_select_columns)
+            join_columns.append(mapped_join_columns)
             selected_columns_datatypes.append(mapped_headers)
 
+    print(join_columns)
     # merge list of selected columns datatypes into one dictionary
     selected_columns_datatypes = {k: v for d in selected_columns_datatypes
                                   for k, v in d.items()}
@@ -107,7 +111,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
                 selected_data[k].append(row[selected_column_position])
 
     # apply joins
-    print(sql_tree['joins'])
+    # print(sql_tree['joins'])
 
     # get length of resulting dataset
     for k in selected_data.keys():
@@ -198,7 +202,6 @@ def execute_sqltree_on_s3(bucket, sql_tree):
                             elif aggregate['function'] == 'max':
                                 aggregated_data[aggregate_name].append(
                                     str(max(aggregate_func)))
-                                print(type(aggregate_func))
 
                             elif aggregate['function'] == 'min':
                                 aggregated_data[aggregate_name].append(
@@ -302,4 +305,4 @@ if __name__ == '__main__':
     # for k, v in sql_tree.items():
     #     print(str(k) + ": " + str(v))
     result = execute_sqltree_on_s3(bucket, sql_tree)
-    print(result)
+    # print(result)

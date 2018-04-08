@@ -173,6 +173,7 @@ def map_select_columns_to_data(sql_tree, table_name,
     selected_column_datatype = {}
     select_identifiers = sql_tree['select']
     select_identifiers.extend(sql_tree['select aggregate'])
+    join_identifiers = sql_tree['joins']
 
     for i, v in enumerate(select_identifiers):
         if v['column_name'] is not None:
@@ -182,6 +183,14 @@ def map_select_columns_to_data(sql_tree, table_name,
                 (table_name, column_positions[column_name])
             selected_column_datatype[column_name] = \
                 column_datatypes[column_name]
+
+    for i, v in enumerate(join_identifiers):
+        if v['left_identifier'] in column_positions.keys():
+            join_column[v['left_identifier']] = \
+                (table_name, column_positions[v['left_identifier']])
+        if v['right_identifier'] in column_positions.keys():
+            join_column[v['right_identifier']] = \
+                (table_name, column_positions[v['right_identifier']])
 
     return selected_column, selected_column_datatype, join_column
 
@@ -212,3 +221,44 @@ def transpose_columns_to_rows(selected_data_in_columns):
         selected_data_in_rows.append(row_data)
 
     return selected_data_headers, selected_data_in_rows
+
+
+def column_intersection(left_column, right_column):
+    '''determines the intersection between two columns of data
+       used in table join
+
+        keyword_args:
+            left_column - list, corresponding to left column in join
+            right_column - list, corresponding to right column in joins
+
+        returns:
+            intersection - dictionary with left column rows as keys,
+                           right column rows as values
+'''
+
+    hashtable = {}
+    intersection = {}
+
+    # bulid a hashtable out of the right column
+    for i, v in enumerate(right_column):
+        try:
+            hashtable[v].append(i)
+        except KeyError:
+            hashtable[v] = [i]
+
+    # iterate the left column over the hashtable and record results
+    for i, v in enumerate(left_column):
+        if v in hashtable.keys():
+            try:
+                intersection[i].append(hashtable[v])
+            except KeyError:
+                intersection[i] = hashtable[v]
+
+    return intersection
+
+
+if __name__ == '__main__':
+    left_column = [1, 1, 3, 4, 2]
+    right_column = [2, 4, 6, 7, 1, 1]
+
+    print(column_intersection(left_column, right_column))
