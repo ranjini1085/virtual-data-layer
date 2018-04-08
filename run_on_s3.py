@@ -63,7 +63,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     query_data = {}
     query_data_column_positions = {}
     query_data_headers = {}
-    selected_columns = []
+    selected_columns = {}
     join_columns = {}
     selected_columns_datatypes = {}
     selected_data = {}
@@ -94,8 +94,8 @@ def execute_sqltree_on_s3(bucket, sql_tree):
                                            query_data_column_positions[k],
                                            query_data_headers[k])
 
-            selected_columns.append(mapped_select_columns)
-
+            # selected_columns.append(mapped_select_columns)
+            selected_columns = {**selected_columns, **mapped_select_columns}
             # merge datatypes and join columns into their dictionaries
             selected_columns_datatypes = {**selected_columns_datatypes,
                                           **mapped_headers}
@@ -106,9 +106,14 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     # has a table in common with the previous join
     # this could be further optimized
 
-    join_plan = optimize_intersection_order(sql_tree)
+    join_plan = optimize_intersection_order(sql_tree, join_columns)
+    print(selected_columns)
 
     # apply joins
+
+    interim_data = {}
+    selected_and_join_columns = {}
+
     for i, join in enumerate(join_plan):
         left_table = join_columns[join['left_identifier']][0]
         left_position = join_columns[join['left_identifier']][1]
@@ -128,17 +133,19 @@ def execute_sqltree_on_s3(bucket, sql_tree):
         table_intersections[intersection_name] = \
             column_intersection(left_column, right_column)
 
-    print(table_intersections)
+    #print(table_intersections)
+
+    selected_and_join_columns = {**selected_columns, **join_columns}
+    #print(selected_and_join_columns)
 
     # select columns from specified dataset
-    for i, column in enumerate(selected_columns):
-        for k in column.keys():
-            selected_data[k] = []
-            select_table = column[k][0]
-            selected_column_position = column[k][1]
+    for k, column in selected_columns.items():
+        selected_data[k] = []
+        select_table = column[0]
+        selected_column_position = column[1]
 
-            for row in query_data[select_table]:
-                selected_data[k].append(row[selected_column_position])
+        for row in query_data[select_table]:
+            selected_data[k].append(row[selected_column_position])
 
     # get length of resulting dataset
     for k in selected_data.keys():
@@ -313,7 +320,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
 if __name__ == '__main__':
 
     bucket = 'virtual-data-layer'
-    input_sql = """
+    tcph3_sql = """
                 select
                     c_custkey,
                     o_orderdate,
@@ -328,9 +335,31 @@ if __name__ == '__main__':
                 and l_orderkey = o_orderkey
                 and o_orderdate < '1997-12-31'"""
 
+    tcph1_sql = """
+    select
+        l_returnflag,
+        l_linestatus,
+        sum(l_quantity),
+        sum(l_extendedprice),
+        sum(l_extendedprice),
+        sum(l_extendedprice),
+        avg(l_quantity),
+        avg(l_extendedprice),
+        avg(l_discount),
+        count(*)
+    from
+        tcph.lineitem
+    where
+        l_shipdate <= '1998-12-01'
+    group by
+        l_returnflag,
+        l_linestatus
+    order by
+        l_returnflag,
+        l_linestatus;"""
     import sql_to_tree
 
-    sql_tree = sql_to_tree.sql_to_tree(input_sql)
+    sql_tree = sql_to_tree.sql_to_tree(tcph3_sql)
     # for k, v in sql_tree.items():
     #    print(str(k) + ": " + str(v))
     result = execute_sqltree_on_s3(bucket, sql_tree)

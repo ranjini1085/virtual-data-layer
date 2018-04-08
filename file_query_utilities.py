@@ -271,8 +271,8 @@ def optimize_intersection_order(sql_tree, join_columns):
                        to the tables in the join
 
       returns:
-        a reordered 'joins' portion of the sql tree in the order that the
-        join should follow
+        ordered_join_list - a reordered 'joins' portion of the sql tree in
+        the order that the join should follow
 '''
 
     join_tables_list = []
@@ -320,13 +320,17 @@ def optimize_intersection_order(sql_tree, join_columns):
 
 
 if __name__ == '__main__':
+    # unit tests
     left_column = [1, 1, 3, 4, 2]
     right_column = [2, 4, 6, 7, 1, 1]
 
     sql_tree = {}
-    sql_tree['joins'] = [{'left_identifier': 'l_lineitemkey', 'right_identifier': 'r_rosterkey', 'join_type': ''},
-                         {'left_identifier': 'c_custkey', 'right_identifier': 'o_custkey', 'join_type': ''},
-                         {'left_identifier': 'l_orderkey', 'right_identifier': 'o_orderkey', 'join_type': ''}]
+    sql_tree['joins'] = [{'left_identifier': 'l_lineitemkey',
+                          'right_identifier': 'r_rosterkey', 'join_type': ''},
+                         {'left_identifier': 'c_custkey',
+                          'right_identifier': 'o_custkey', 'join_type': ''},
+                         {'left_identifier': 'l_orderkey',
+                          'right_identifier': 'o_orderkey', 'join_type': ''}]
 
     join_columns = {'c_custkey': ('customer', 0),
                     'o_custkey': ('orders', 1),
@@ -336,4 +340,4 @@ if __name__ == '__main__':
                     'r_rosterkey': ('roster', 1)}
 
     # print(column_intersection(left_column, right_column))
-    (optimize_intersection_order(sql_tree, join_columns))
+    print(optimize_intersection_order(sql_tree, join_columns))
