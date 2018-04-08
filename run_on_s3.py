@@ -3,7 +3,9 @@ import boto3
 from botocore.exceptions import EndpointConnectionError
 from file_query_utilities import file_to_data_structure,\
                            map_select_columns_to_data,\
-                           transpose_columns_to_rows
+                           transpose_columns_to_rows,\
+                           column_intersection,\
+                           optimize_intersection_order
 
 
 def retrieve_s3_file(bucket, filename, folder=None):
@@ -62,9 +64,10 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     query_data_column_positions = {}
     query_data_headers = {}
     selected_columns = []
-    join_columns = []
-    selected_columns_datatypes = []
+    join_columns = {}
+    selected_columns_datatypes = {}
     selected_data = {}
+    table_intersections = {}
     post_join_row_count = 0
 
     # download files in query and map to data structures
@@ -83,7 +86,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
                                                     s3_filename,
                                                     s3_folder),
                                    sql_tree)
-    # print(query_data_column_positions)
+
     # map selected columns to tables
     for k in query_data_column_positions:
             mapped_select_columns, mapped_headers, mapped_join_columns = \
@@ -92,13 +95,40 @@ def execute_sqltree_on_s3(bucket, sql_tree):
                                            query_data_headers[k])
 
             selected_columns.append(mapped_select_columns)
-            join_columns.append(mapped_join_columns)
-            selected_columns_datatypes.append(mapped_headers)
 
-    print(join_columns)
-    # merge list of selected columns datatypes into one dictionary
-    selected_columns_datatypes = {k: v for d in selected_columns_datatypes
-                                  for k, v in d.items()}
+            # merge datatypes and join columns into their dictionaries
+            selected_columns_datatypes = {**selected_columns_datatypes,
+                                          **mapped_headers}
+            join_columns = {**join_columns, **mapped_join_columns}
+
+    # build join plan
+    # follows fairly naive algorithm, just ordering so that each join
+    # has a table in common with the previous join
+    # this could be further optimized
+
+    join_plan = optimize_intersection_order(sql_tree)
+
+    # apply joins
+    for i, join in enumerate(join_plan):
+        left_table = join_columns[join['left_identifier']][0]
+        left_position = join_columns[join['left_identifier']][1]
+        right_table = join_columns[join['right_identifier']][0]
+        right_position = join_columns[join['right_identifier']][1]
+
+        left_column = []
+        right_column = []
+
+        for row in query_data[left_table]:
+            left_column.append(row[left_position])
+
+        for row in query_data[right_table]:
+            right_column.append(row[right_position])
+
+        intersection_name = left_table + ',' + right_table
+        table_intersections[intersection_name] = \
+            column_intersection(left_column, right_column)
+
+    print(table_intersections)
 
     # select columns from specified dataset
     for i, column in enumerate(selected_columns):
@@ -109,9 +139,6 @@ def execute_sqltree_on_s3(bucket, sql_tree):
 
             for row in query_data[select_table]:
                 selected_data[k].append(row[selected_column_position])
-
-    # apply joins
-    # print(sql_tree['joins'])
 
     # get length of resulting dataset
     for k in selected_data.keys():
@@ -293,16 +320,18 @@ if __name__ == '__main__':
                     o_shippriority
             from
                 tcph.customer,
-                tcph.orders
+                tcph.orders,
+                tcph.lineitem
             where
                 c_mktsegment = 'BUILDING'
                 and c_custkey = o_custkey
+                and l_orderkey = o_orderkey
                 and o_orderdate < '1997-12-31'"""
 
     import sql_to_tree
 
     sql_tree = sql_to_tree.sql_to_tree(input_sql)
     # for k, v in sql_tree.items():
-    #     print(str(k) + ": " + str(v))
+    #    print(str(k) + ": " + str(v))
     result = execute_sqltree_on_s3(bucket, sql_tree)
     # print(result)
