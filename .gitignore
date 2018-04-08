@@ -23,3 +23,7 @@ lineitem
 tcph_customer_header
 tcph_orders
 tcph_orders_header
+*.un~
+customer
+tcph_test_data.sql.txt~
+orders
