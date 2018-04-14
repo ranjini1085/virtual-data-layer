@@ -1,3 +1,6 @@
+#!/usr/bin/python
+
+
 def get_credentials(credential_file_name):
     '''reads in database credentials stored in a text file
 

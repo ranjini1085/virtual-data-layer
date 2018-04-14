@@ -2,6 +2,37 @@
 import re
 
 
+def convert_SQL_to_postgres(input_sql,
+                            original_datastore_type):
+    '''Converts Oracle SQL to PostgresSQL
+
+    keyword_args:
+        input_sql = the SQL statement to be converted, in text
+        original_datastore_type = the datastore to be convered from
+'''
+
+    sql_tree = sql_to_tree.sql_to_tree(input_sql)
+    return \
+        tree_to_postgres_sql.tree_to_postgres_sql(sql_tree,
+                                                  original_datastore_type)
+
+
+def run_on_postgres(postgres_sql, cursor):
+    '''executes query on posgresql
+
+    keyword_args:
+        postgres_sql: SQL statement formatted for PostgreSQL
+        cursor: a psycopg2 cursor object
+
+    returns:
+        results of query
+
+'''
+
+    cursor.execute(postgres_sql)
+    return cursor.fetchall()
+
+
 def syntax_replace_posgres(input_token, sql_type):
     '''Converts oracle-compatible SQL tokens to postgres-compatible SQL tokens.
 

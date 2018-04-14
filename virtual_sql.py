@@ -1,21 +1,19 @@
 #!/usr/bin/python
-import sql_to_tree
-import tree_to_postgres_sql
 import psycopg2
-#import cx_Oracle
+# import cx_Oracle
 
 
-def convert_oracle_to_postgres(input_sql,
-                               original_datastore_type,
-                               target_datastore_type):
+def virtual_sql(input_sql):
+'''primary interface for virtual sql engine
 
-    if target_datastore_type.upper() == 'POSTGRES':
-        sql_tree = sql_to_tree.sql_to_tree(input_sql)
-        return \
-            tree_to_postgres_sql.tree_to_postgres_sql(sql_tree,
-                                                      original_datastore_type)
-    else:
-        return 'Datastore not supported!'
+    keyword_args - takes sql to be executed on virtual engine
+
+    returns - 
+    return None
+
+
+def configure_virtual_sql():
+    None
 
 
 def connect_to_database(target_datastore_type,
@@ -48,8 +46,3 @@ def connect_to_database(target_datastore_type,
 #        conn.close
 
         return None
-
-
-def run_on_postgres(postgres_sql, cursor):
-    cursor.execute(postgres_sql)
-    return cursor.fetchall()
