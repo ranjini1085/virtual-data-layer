@@ -4,12 +4,13 @@ import psycopg2
 
 
 def virtual_sql(input_sql):
-'''primary interface for virtual sql engine
+    '''primary interface for virtual sql engine
 
     keyword_args - takes sql to be executed on virtual engine
 
-    returns - 
+    returns -
     return None
+'''
 
 
 def configure_virtual_sql():
