@@ -58,3 +58,7 @@ tcph_region
 tcph_region_header
 tcph_supplier
 tcph_supplier_header
+data/sample/nation
+data/sample/partsuppcost
+data/sample/supplier
+data/sample/region
