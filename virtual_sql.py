@@ -1,16 +1,61 @@
 #!/usr/bin/python
 import psycopg2
+from virtual_S3_module import execute_sqltree_on_s3
+import virtual_postgres_module
+import sql_to_tree
+import get_credentials
 # import cx_Oracle
 
 
 def virtual_sql(input_sql):
     '''primary interface for virtual sql engine
 
-    keyword_args - takes sql to be executed on virtual engine
+    keyword_args - takes sql to be executed on target database
 
     returns -
-    return None
+        if any errors, returns dataset
+
 '''
+    configuration = {}
+
+    try:
+        with open('virtual_sql_configuration.txt', mode='r') as config_file:
+            config_file = config_file.read().splitlines()
+
+            for i, v in enumerate(config_file):
+                if v.find('input_sql_type=') != -1:
+                    configuration['input_sql_type'] = \
+                        v.replace('input_sql_type=', '')
+                if v.find('target_datastore_type=') != -1:
+                    configuration['target_datastore_type'] = \
+                        v.replace('target_datastore_type=', '')
+                if v.find('target_datastore_url=') != -1:
+                    configuration['target_datastore_url'] = \
+                        v.replace('target_datastore_url=', '')
+                if v.find('target_datastore_name=') != -1:
+                    configuration['target_datastore_name'] = \
+                        v.replace('target_datastore_name=', '')
+
+    except FileNotFoundError as fe:
+        print('Configuration file not found!')
+        return None
+
+    sql_tree = sql_to_tree.sql_to_tree(input_sql)
+
+    if configuration['target_datastore_type'] == 'PostgreSQL':
+
+        postgres_credentials = \
+            get_credentials.get_credentials('postgres_connection.txt')
+
+    elif configuration['target_datastore_type'] == 'S3':
+        result = execute_sqltree_on_s3(configuration['target_datastore_name'],
+                                       sql_tree)
+
+    else:
+        print('Datastore type ' + configuration['target_datastore_type']
+              + 'not supported!')
+
+    return result
 
 
 def configure_virtual_sql(input_sql_type, target_datastore_type,
@@ -59,6 +104,22 @@ def configure_virtual_sql(input_sql_type, target_datastore_type,
 def connect_to_database(target_datastore_type,
                         target_datastore_url, target_datastore_dbname,
                         target_datastore_username, target_datastore_password):
+    '''connects to a target database.  only supports postgres at the moment
+        not to be used with non-database stores like S3
+
+    keyword_args:
+        target_datastore_type
+        target_datastore_url
+        target_datastore_dbname
+        target_datastore_username
+        target_datastore_password
+
+    returns:
+        a cursor containing the database connection, or None if
+            connection cannot be made
+
+'''
+
     # connect to target database
 
     if target_datastore_type == 'postgres':
@@ -92,4 +153,6 @@ def connect_to_database(target_datastore_type,
 
 if __name__ == '__main__':
 
-    print(configure_virtual_sql('Oracle', 'S3', 'None', 'virtual-data-layer'))
+    configure_virtual_sql('Oracle', 'S3', 'None', 'virtual-data-layer')
+    result = virtual_sql('select c_custkey from tcph.customer')
+    print(result)
