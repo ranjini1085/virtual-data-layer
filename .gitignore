@@ -44,3 +44,17 @@ data/header/partsuppcost_header
 data/header/region_header
 tcph_orders.csv
 tcph_orders.csv
+data/sample/part
+data/sample/partsupp
+tcph_nation
+tcph_nation_header
+tcph_part
+tcph_part_header
+tcph_partsupp
+tcph_partsupp_header
+tcph_partsuppcost
+tcph_partsuppcost_header
+tcph_region
+tcph_region_header
+tcph_supplier
+tcph_supplier_header

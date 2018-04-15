@@ -5,8 +5,8 @@ from datetime import datetime
 from file_query_utilities import file_to_data_structure,\
                            map_select_columns_to_data,\
                            transpose_columns_to_rows,\
-                           optimize_intersection_order,\
-                           intersect_data
+                           optimize_join_order,\
+                           join_data
 
 
 def retrieve_s3_file(bucket, filename, folder=None):
@@ -115,7 +115,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     # has a table in common with the previous join
     # this could be further optimized
 
-    join_plan = optimize_intersection_order(sql_tree, join_columns)
+    join_plan = optimize_join_order(sql_tree, join_columns)
     selected_and_join_columns = {**selected_columns, **join_columns}
 
     # apply join plan
@@ -133,10 +133,10 @@ def execute_sqltree_on_s3(bucket, sql_tree):
     previously_joined_tables = set()
     # iteratively join all tables
     for i, join in enumerate(join_plan):
-        interim_data = intersect_data(join,
-                                      interim_data,
-                                      selected_and_join_columns,
-                                      previously_joined_tables)
+        interim_data = join_data(join,
+                                 interim_data,
+                                 selected_and_join_columns,
+                                 previously_joined_tables)
         previously_joined_tables.update(join['join_tables'])
 
     # select columns from specified dataset
@@ -373,9 +373,47 @@ if __name__ == '__main__':
     order by
         l_returnflag,
         l_linestatus;"""
+
+    tcph2_sql = """
+    select
+        s_acctbal,
+        r_name,
+        s_name,
+        n_name,
+        p_partkey,
+        p_mfgr,
+        s_address,
+        s_phone,
+        s_comment,
+        ps_supplycost
+    from
+        tcph.part,
+        tcph.supplier,
+        tcph.partsupp,
+        tcph.partsuppcost,
+        tcph.nation,
+        tcph.region
+    where
+        p_partkey = ps_partkey
+        and s_suppkey = ps_suppkey
+        and p_size = 1
+        and s_nationkey = n_nationkey
+        and n_regionkey = r_regionkey
+        and r_name = 'AFRICA                   '
+        and ps_supplycost = psc_min_supplycost
+    order by
+        s_acctbal,
+        n_name,
+        s_name,
+        p_partkey;"""
+
+    nation_test = """ select s_suppkey, n_name, s_nationkey, n_nationkey
+    from tcph.supplier, tcph.nation
+    where s_nationkey = n_nationkey"""
+
     import sql_to_tree
 
-    sql_tree = sql_to_tree.sql_to_tree(tcph1_sql)
+    sql_tree = sql_to_tree.sql_to_tree(tcph2_sql)
     # for k, v in sql_tree.items():
     #    print(str(k) + ": " + str(v))
     result = execute_sqltree_on_s3(bucket, sql_tree)

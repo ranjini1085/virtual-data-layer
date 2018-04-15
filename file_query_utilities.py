@@ -223,8 +223,8 @@ def transpose_columns_to_rows(selected_data_in_columns):
     return selected_data_headers, selected_data_in_rows
 
 
-def column_intersection(left_column, right_column):
-    '''determines the intersection between two columns of data
+def column_join(left_column, right_column):
+    '''determines the join between two columns of data
        used in table join
 
         keyword_args:
@@ -232,12 +232,12 @@ def column_intersection(left_column, right_column):
             right_column - list, corresponding to right column in joins
 
         returns:
-            intersection - dictionary with left column rows as keys,
+            join - dictionary with left column rows as keys,
                            right column rows as values
 '''
 
     hashtable = {}
-    intersection = {}
+    join = {}
 
     # bulid a hashtable out of the right column
     for i, v in enumerate(right_column):
@@ -250,15 +250,15 @@ def column_intersection(left_column, right_column):
     for i, v in enumerate(left_column):
         if v in hashtable.keys():
             try:
-                intersection[i].append(hashtable[v])
+                join[i].append(hashtable[v])
             except KeyError:
-                intersection[i] = hashtable[v]
+                join[i] = hashtable[v]
 
-    return intersection
+    return join
 
 
-def optimize_intersection_order(sql_tree, join_columns):
-    '''optimizes order of tables intersections
+def optimize_join_order(sql_tree, join_columns):
+    '''optimizes order of tables join
        useful when joining multiple tables
 
        can be optimized much further than the implementation below, which
@@ -301,6 +301,7 @@ def optimize_intersection_order(sql_tree, join_columns):
     # order joins such that each join features a table in the preceding joins
     # could be optimized to go from smallest table to largest table or
     # something like that
+
     for i in range(len(join_tables_list)):
         for j, join_tables in enumerate(join_tables_list):
             if len(join_order) == 0:
@@ -319,57 +320,62 @@ def optimize_intersection_order(sql_tree, join_columns):
     return ordered_join_list
 
 
-def intersect_data(intersect, dataset, column_map, previously_joined_tables):
-    '''executes an intersection on a columnar dataset
+def join_data(join, dataset, column_map, previously_joined_tables):
+    '''executes an join on a columnar dataset
 
     keyword_args:
-        join: a single list element from the optimize_intersection_order func
+        join: a single list element from the optimize_join_order func
         dataset: a columnar dataset, expressed as a dictionary with
                  the keys as columns and values as lists of row filter_values
         column_map: a list of columns mapped to tables
 
     returns:
-        result_data: a columnar dataset with this particular intersect applied
+        result_data: a columnar dataset with this particular join applied
 
 '''
-
     result_data = {}
 
     # optimize slightly by joining smaller table (left) to larger table (right)
-    if len(dataset[intersect['left_identifier']]) < \
-            len(dataset[intersect['right_identifier']]):
+    try:
+        if len(dataset[join['left_identifier']]) < \
+                len(dataset[join['right_identifier']]):
 
-        left_table = column_map[intersect['left_identifier']][0]
-        right_table = column_map[intersect['right_identifier']][0]
+            left_table = column_map[join['left_identifier']][0]
+            right_table = column_map[join['right_identifier']][0]
 
-        left_column = dataset[intersect['left_identifier']]
-        right_column = dataset[intersect['right_identifier']]
+            left_column = dataset[join['left_identifier']]
+            right_column = dataset[join['right_identifier']]
 
-    else:
-        left_table = column_map[intersect['right_identifier']][0]
-        right_table = column_map[intersect['left_identifier']][0]
-
-        left_column = dataset[intersect['right_identifier']]
-        right_column = dataset[intersect['left_identifier']]
-
-    table_intersections = \
-        column_intersection(left_column, right_column)
-
-    for k, column in column_map.items():
-        result_data[k] = []
-        select_table = column[0]
-
-        if select_table in [left_table, right_table] \
-                or select_table in previously_joined_tables:
-            for left_row, right_rows in table_intersections.items():
-                for i, right_row in enumerate(right_rows):
-                    if select_table == left_table \
-                            or select_table in previously_joined_tables:
-                        result_data[k].append(dataset[k][left_row])
-                    elif select_table == right_table:
-                        result_data[k].append(dataset[k][right_row])
         else:
-            result_data[k] = dataset[k]
+            left_table = column_map[join['right_identifier']][0]
+            right_table = column_map[join['left_identifier']][0]
+
+            left_column = dataset[join['right_identifier']]
+            right_column = dataset[join['left_identifier']]
+
+        table_joins = column_join(left_column, right_column)
+
+        for k, column in column_map.items():
+            result_data[k] = []
+            select_table = column[0]
+
+            if select_table in [left_table, right_table] \
+                    or select_table in previously_joined_tables:
+                for left_row, right_rows in table_joins.items():
+                    for i, right_row in enumerate(right_rows):
+                        if select_table == left_table:
+                            result_data[k].append(dataset[k][left_row])
+                        elif select_table == right_table:
+                            result_data[k].append(dataset[k][right_row])
+                        elif select_table in previously_joined_tables:
+                            if left_table in previously_joined_tables:
+                                result_data[k].append(dataset[k][left_row])
+                            elif right_table in previously_joined_tables:
+                                result_data[k].append(dataset[k][right_row])
+            else:
+                result_data[k] = dataset[k]
+    except KeyError as err:
+        print('Invalid identifier \'' + err + '\'')
 
     return result_data
 
@@ -394,5 +400,5 @@ if __name__ == '__main__':
                     'l_lineitemkey': ('lineitem', 3),
                     'r_rosterkey': ('roster', 1)}
 
-    # print(column_intersection(left_column, right_column))
-    print(optimize_intersection_order(sql_tree, join_columns))
+    # print(column_join(left_column, right_column))
+    print(optimize_join_order(sql_tree, join_columns))
