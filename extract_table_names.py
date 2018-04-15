@@ -79,4 +79,4 @@ if __name__ == '__main__':
             and c.customer_id = o.customer_id
             and o.part_number = tcph.part.part_number;"""
 
-    print(extract_table_aliases(sql))
+    print(extract_table_definitions(sql))

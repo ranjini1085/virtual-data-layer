@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import boto3
-from botocore.exceptions import EndpointConnectionError
+from botocore.exceptions import EndpointConnectionError, ClientError
 from datetime import datetime
 from file_query_utilities import file_to_data_structure,\
                            map_select_columns_to_data,\
@@ -34,18 +34,27 @@ def retrieve_s3_file(bucket, filename, folder=None):
     local_header_filename = local_filename + '_header'
     s3_header_filename = s3_filename + '_header'
 
-
-#   download file
+    # download data file
     try:
         with open(local_filename, "wb") as s3_file:
             s3.download_fileobj(bucket, s3_filename, s3_file)
 
-        with open(local_header_filename, "wb") as s3_file:
-            s3.download_fileobj(bucket, s3_header_filename, s3_file)
     except EndpointConnectionError:
         print('cannot connect to S3 bucket')
+    except ClientError:
+        print('cannot locate file ' + s3_filename)
 
-#   return name of local file
+    # download header file
+    try:
+        with open(local_header_filename, "wb") as s3_file:
+            s3.download_fileobj(bucket, s3_header_filename, s3_file)
+
+    except EndpointConnectionError:
+        print('cannot connect to S3 bucket')
+    except ClientError:
+        print('cannot locate file: ' + s3_header_filename)
+
+    # return name of local file
     return local_filename
 
 
@@ -153,7 +162,7 @@ def execute_sqltree_on_s3(bucket, sql_tree):
             except KeyError as e:
                 print(e)
 
-        # step 2: get distint values from group by columns
+        # step 2: get distinct values from group by columns
         #   and denote the rows for each distinct value
         for row in range(post_join_row_count):
             unique_grouping = []
@@ -366,7 +375,7 @@ if __name__ == '__main__':
         l_linestatus;"""
     import sql_to_tree
 
-    sql_tree = sql_to_tree.sql_to_tree(tcph3_sql)
+    sql_tree = sql_to_tree.sql_to_tree(tcph1_sql)
     # for k, v in sql_tree.items():
     #    print(str(k) + ": " + str(v))
     result = execute_sqltree_on_s3(bucket, sql_tree)
