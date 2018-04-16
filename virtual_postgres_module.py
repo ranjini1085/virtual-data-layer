@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import re
+import sql_to_tree
 
 
 def convert_SQL_to_postgres(input_sql,
@@ -12,12 +13,10 @@ def convert_SQL_to_postgres(input_sql,
 '''
 
     sql_tree = sql_to_tree.sql_to_tree(input_sql)
-    return \
-        tree_to_postgres_sql.tree_to_postgres_sql(sql_tree,
-                                                  original_datastore_type)
+    return tree_to_postgres_sql(sql_tree, original_datastore_type)
 
 
-def run_on_postgres(postgres_sql, cursor):
+def execute_sql_on_postgres(postgres_sql, cursor):
     '''executes query on posgresql
 
     keyword_args:
@@ -30,7 +29,10 @@ def run_on_postgres(postgres_sql, cursor):
 '''
 
     cursor.execute(postgres_sql)
-    return cursor.fetchall()
+    records = cursor.fetchall()
+    colnames = tuple([desc[0] for desc in cursor.description])
+
+    return (colnames, records)
 
 
 def syntax_replace_posgres(input_token, sql_type):
@@ -225,8 +227,6 @@ def tree_to_postgres_sql(sql_tree, sql_type):
 
 
 if __name__ == '__main__':
-
-    import sql_to_tree
 
     tcph3_sql = """
         select

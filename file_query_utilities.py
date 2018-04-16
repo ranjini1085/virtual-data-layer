@@ -206,19 +206,19 @@ def transpose_columns_to_rows(selected_data_in_columns):
 
     returns:
         selected_data_headers - list of each of the selected columns
-        selected_data_in_rows - list of lists, with each list being a row
-                                of data.  first row is the header
+        selected_data_in_rows - list of tuples, with each tuples being a row
+                                of data
 
 '''
     selected_data_in_rows = []
-    selected_data_headers = list(selected_data_in_columns.keys())
+    selected_data_headers = tuple(selected_data_in_columns.keys())
 
     for row, value in \
             enumerate(selected_data_in_columns[selected_data_headers[0]]):
         row_data = []
         for k in selected_data_in_columns.keys():
             row_data.append(selected_data_in_columns[k][row])
-        selected_data_in_rows.append(row_data)
+        selected_data_in_rows.append(tuple(row_data))
 
     return selected_data_headers, selected_data_in_rows
 
