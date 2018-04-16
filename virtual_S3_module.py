@@ -316,20 +316,11 @@ def execute_sqltree_on_s3(bucket, sql_tree):
 
 if __name__ == '__main__':
 
+    # unit tests
+
     bucket = 'virtual-data-layer'
     test_sql = """
-                select
-                    c_custkey,
-                    o_orderdate,
-                    o_shippriority
-            from
-                tcph.customer,
-                tcph.orders,
-                tcph.lineitem
-            where
-                c_custkey = o_custkey
-                and o_orderkey = l_orderkey
-                and c_custkey = '1'"""
+                select c_custkey from tcph.customer"""
 
     tcph3_sql = """
         select
@@ -411,7 +402,7 @@ if __name__ == '__main__':
 
     import sql_to_tree
 
-    sql_tree = sql_to_tree.sql_to_tree(tcph3_sql)
+    sql_tree = sql_to_tree.sql_to_tree(test_sql)
     # for k, v in sql_tree.items():
     #    print(str(k) + ": " + str(v))
     result = execute_sqltree_on_s3(bucket, sql_tree)
